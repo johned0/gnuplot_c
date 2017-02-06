@@ -422,8 +422,8 @@ h_GPC_Plot *gpc_init_xy (const char *plotTitle,
     fprintf (plotHandle->pipe, "set rmargin at screen %4.8lf\n", PLOT_RMARGIN);
     fprintf (plotHandle->pipe, "set border back\n");        // Set border behind plot
 
-    fprintf (plotHandle->pipe, "set ylabel \"%s\"\n", xLabel);  // Axis labels look better when rotated
-    fprintf (plotHandle->pipe, "set xlabel \"%s\"\n", yLabel);
+    fprintf (plotHandle->pipe, "set xlabel \"%s\"\n", xLabel);  // Axis labels look better when rotated
+    fprintf (plotHandle->pipe, "set ylabel \"%s\"\n", yLabel);
     fprintf (plotHandle->pipe, "set nokey\n");
 
     fprintf (plotHandle->pipe, "unset border\n");

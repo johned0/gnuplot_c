@@ -22,16 +22,17 @@
     #define pclose _pclose
     #define mssleep Sleep
     // #pragma warning(disable:4996)                           // -D "_CRT_SECURE_NO_WARNINGS=1"
-#else                               // Use GNU compiler
-    #include <unistd.h>
-    #include <time.h>
-    #if (GPC_DEBUG == 1)
-        #define GNUPLOT_CMD "tee debug.log | gnuplot -persist"    // Do not pipe the text output to null so that it can be used for debugging
-        // #define GNUPLOT_CMD "gnuplot > debug.log"          // Pipe the text output to debug.log for debugging
-    #else
-        #define GNUPLOT_CMD "gnuplot > /dev/nul 2>&1"      // Pipe the text output to null for higher performance
-    #endif
-    #define mssleep(u) usleep(u*1000)
+#else    
+  #include <unistd.h>
+  #include <time.h>
+                           // Use GNU compiler
+  #if (GPC_DEBUG == 1)
+    #define GNUPLOT_CMD "tee debug.log | gnuplot -persist"      // Do not pipe the text output to null so that it can be used for debugging
+    // #define GNUPLOT_CMD "gnuplot > debug.log"          // Pipe the text output to debug.log for debugging
+  #else
+    #define GNUPLOT_CMD "gnuplot > /dev/null 2>&1"        // Pipe the text output to null for higher performance
+  #endif
+  #define mssleep(u) usleep(u*1000)
 #endif
 
 /********************************************************

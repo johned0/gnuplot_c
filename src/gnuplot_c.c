@@ -33,7 +33,8 @@
             #define GNUPLOT_CMD "gnuplot > /dev/null 2>&1"  // Pipe the text output to null for higher performance
         #else
             #define GNUPLOT_CMD "gnuplot > /dev/nul 2>&1"   // Pipe the text output to null for higher performance
-        #endif    #endif
+        #endif
+    #endif
     #define mssleep(u) usleep(u*1000)
 #endif
 

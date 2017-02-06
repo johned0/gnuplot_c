@@ -29,8 +29,11 @@
         #define GNUPLOT_CMD "tee debug.log | gnuplot -persist"    // Do not pipe the text output to null so that it can be used for debugging
         // #define GNUPLOT_CMD "gnuplot > debug.log"          // Pipe the text output to debug.log for debugging
     #else
-        #define GNUPLOT_CMD "gnuplot > /dev/nul 2>&1"      // Pipe the text output to null for higher performance
-    #endif
+        #if ((__unix) || (__MACH__))                        // Linux / OS X
+            #define GNUPLOT_CMD "gnuplot > /dev/null 2>&1"  // Pipe the text output to null for higher performance
+        #else
+            #define GNUPLOT_CMD "gnuplot > /dev/nul 2>&1"   // Pipe the text output to null for higher performance
+        #endif    #endif
     #define mssleep(u) usleep(u*1000)
 #endif
 
@@ -958,6 +961,7 @@ h_GPC_Plot *gpc_init_image (const char *plotTitle,
     else
     {
         fprintf (plotHandle->pipe, "set zrange [%d:%d]\n", zMin, zMax);
+        fprintf (plotHandle->pipe, "set cbrange [%d:%d]\n", zMin, zMax);
     }
 
     fprintf (plotHandle->pipe, "set tics out nomirror scale 0.75\n");  // Tics format

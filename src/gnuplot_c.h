@@ -180,9 +180,15 @@ h_GPC_Plot *gpc_init_image (const char *plotTitle,  // Plot title
     const char *colourPalette,                      // Colour palette
     const enum gpcKeyMode keyMode);                 // Legend / key mode
 
+#define gpc_init_heatmap gpc_init_image             // create alias
+
 int gpc_plot_image (h_GPC_Plot *plotHandle,         // Plot handle
     const unsigned char *pData,                     // Dataset pointer
     const char *pDataName);                         // Dataset title
+
+int gpc_plot_heatmap (h_GPC_Plot *plotHandle,           // Plot handle
+  const unsigned int *pData,                         // Dataset pointer
+  const char *pDataName);                             // Dataset title
 
 h_GPC_Plot *gpc_init_polar (const char *plotTitle,  // Plot title
     const double gMin,                              // Minimum gain value

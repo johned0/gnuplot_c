@@ -1032,6 +1032,48 @@ int gpc_plot_image (h_GPC_Plot *plotHandle,
     return (GPC_NO_ERROR);
 }
 
+/********************************************************
+* Function : gpc_plot_heatmap
+*
+* Parameters :
+*   h_GPC_Plot *plotHandle,
+*   const unsigned int *pData,
+*   const char *pDataName)
+*
+* Return value :
+*   int - error flag
+*
+* Description : Generate the heatmap plot
+*
+********************************************************/
+
+int gpc_plot_heatmap (h_GPC_Plot *plotHandle,
+  const unsigned int *pData,
+  const char *pDataName)
+
+{
+  int i, j;
+
+  fprintf (plotHandle->pipe, "splot '-' matrix title \"%s\" with image\n", pDataName); // Set plot format
+
+  for (j = 0; j < plotHandle->yAxisLength; j++)                 // For every row
+  {
+    for (i = 0; i < plotHandle->xAxisLength; i++)               // For every pixel in the row
+    {
+      fprintf (plotHandle->pipe, "%u ", pData[i + (j * plotHandle->xAxisLength)]);
+    }
+    fprintf (plotHandle->pipe, "\n");                           // End of isoline scan
+  }
+  fprintf (plotHandle->pipe, "\ne\ne\n");                       // End of spectrogram dataset
+
+  fflush (plotHandle->pipe);                                    // Flush the pipe
+
+#if GPC_DEBUG
+  sleep (2000);                                                 // Slow down output so that pipe doesn't overflow when logging results
+#endif
+
+  return (GPC_NO_ERROR);
+}
 
 /********************************************************
 * Function : gpc_init_polar

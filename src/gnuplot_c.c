@@ -487,8 +487,8 @@ int gpc_plot_xy (h_GPC_Plot *plotHandle,
         }
         else
         {
-            fprintf (plotHandle->pipe, "set xrange[-%1.3le:%1.3le]\n", plotHandle->scalingMode, plotHandle->scalingMode);
-            fprintf (plotHandle->pipe, "set yrange[-%1.3le:%1.3le]\n", plotHandle->scalingMode, plotHandle->scalingMode);
+            fprintf (plotHandle->pipe, "set xrange[%lf:%lf]\n", plotHandle->xMin, plotHandle->xMax);
+            fprintf (plotHandle->pipe, "set yrange[%lf:%lf]\n", plotHandle->yMin, plotHandle->yMax);
         }
 
         if (plotHandle->highestGraphNumber != 0)

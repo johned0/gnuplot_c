@@ -22,16 +22,17 @@
     #define pclose _pclose
     #define mssleep Sleep
     // #pragma warning(disable:4996)                           // -D "_CRT_SECURE_NO_WARNINGS=1"
-#else                               // Use GNU compiler
-    #include <unistd.h>
-    #include <time.h>
-    #if (GPC_DEBUG == 1)
-        #define GNUPLOT_CMD "tee debug.log | gnuplot -persist"    // Do not pipe the text output to null so that it can be used for debugging
-        // #define GNUPLOT_CMD "gnuplot > debug.log"          // Pipe the text output to debug.log for debugging
-    #else
-        #define GNUPLOT_CMD "gnuplot > /dev/nul 2>&1"      // Pipe the text output to null for higher performance
-    #endif
-    #define mssleep(u) usleep(u*1000)
+#else    
+  #include <unistd.h>
+  #include <time.h>
+                           // Use GNU compiler
+  #if (GPC_DEBUG == 1)
+    #define GNUPLOT_CMD "tee debug.log | gnuplot -persist"      // Do not pipe the text output to null so that it can be used for debugging
+    // #define GNUPLOT_CMD "gnuplot > debug.log"          // Pipe the text output to debug.log for debugging
+  #else
+    #define GNUPLOT_CMD "gnuplot > /dev/null 2>&1"        // Pipe the text output to null for higher performance
+  #endif
+  #define mssleep(u) usleep(u*1000)
 #endif
 
 /********************************************************
@@ -95,7 +96,7 @@ h_GPC_Plot *gpc_init_2d (const char *plotTitle,
         plotHandle->tempFilesUsedFlag = GPC_FALSE;          // Temporary files NOT used - DON'T need to delete them in gpc_close ()
     }
 
-    fprintf (plotHandle->pipe, "set term wxt 0 title \"%s\" size %d, %d\n", plotHandle->plotTitle, CANVAS_WIDTH, CANVAS_HEIGHT); // Set the plot
+    fprintf (plotHandle->pipe, "set term wxt 0 title \"%s\" size %u, %u\n", plotHandle->plotTitle, CANVAS_WIDTH, CANVAS_HEIGHT); // Set the plot
     fprintf (plotHandle->pipe, "set lmargin at screen %4.8lf\n", PLOT_LMARGIN); // Define the margins so that the graph is 512 pixels wide
     fprintf (plotHandle->pipe, "set rmargin at screen %4.8lf\n", PLOT_RMARGIN);
     fprintf (plotHandle->pipe, "set border back\n");            // Set border behind plot
@@ -203,7 +204,7 @@ h_GPC_Plot *gpc_init_2d_logscalex (const char *plotTitle,
         plotHandle->tempFilesUsedFlag = GPC_FALSE;          // Temporary files NOT used - DON'T need to delete them in gpc_close ()
     }
 
-    fprintf (plotHandle->pipe, "set term wxt 0 title \"%s\" size %d, %d\n", plotHandle->plotTitle, CANVAS_WIDTH, CANVAS_HEIGHT); // Set the plot
+    fprintf (plotHandle->pipe, "set term wxt 0 title \"%s\" size %u, %u\n", plotHandle->plotTitle, CANVAS_WIDTH, CANVAS_HEIGHT); // Set the plot
     fprintf (plotHandle->pipe, "set lmargin at screen %4.8lf\n", PLOT_LMARGIN); // Define the margins so that the graph is 512 pixels wide
     fprintf (plotHandle->pipe, "set rmargin at screen %4.8lf\n", PLOT_RMARGIN);
     fprintf (plotHandle->pipe, "set border back\n");            // Set border behind plot
@@ -417,13 +418,13 @@ h_GPC_Plot *gpc_init_xy (const char *plotTitle,
     plotHandle->scalingMode = dimension;                    // Set dimension in handle
     strcpy (plotHandle->plotTitle, plotTitle);              // Set plot title in handle
 
-    fprintf (plotHandle->pipe, "set term wxt 0 title \"%s\" size %d, %d\n", plotHandle->plotTitle, CANVAS_WIDTH, CANVAS_HEIGHT); // Set the plot
+    fprintf (plotHandle->pipe, "set term wxt 0 title \"%s\" size %u, %u\n", plotHandle->plotTitle, CANVAS_WIDTH, CANVAS_HEIGHT); // Set the plot
     fprintf (plotHandle->pipe, "set lmargin at screen %4.8lf\n", PLOT_LMARGIN); // Define the margins so that the graph is 512 pixels wide
     fprintf (plotHandle->pipe, "set rmargin at screen %4.8lf\n", PLOT_RMARGIN);
     fprintf (plotHandle->pipe, "set border back\n");        // Set border behind plot
 
-    fprintf (plotHandle->pipe, "set ylabel \"%s\"\n", xLabel);  // Axis labels look better when rotated
-    fprintf (plotHandle->pipe, "set xlabel \"%s\"\n", yLabel);
+    fprintf (plotHandle->pipe, "set xlabel \"%s\"\n", xLabel);  // Axis labels look better when rotated
+    fprintf (plotHandle->pipe, "set ylabel \"%s\"\n", yLabel);
     fprintf (plotHandle->pipe, "set nokey\n");
 
     fprintf (plotHandle->pipe, "unset border\n");
@@ -487,8 +488,8 @@ int gpc_plot_xy (h_GPC_Plot *plotHandle,
         }
         else
         {
-            fprintf (plotHandle->pipe, "set xrange[-%1.3le:%1.3le]\n", plotHandle->scalingMode, plotHandle->scalingMode);
-            fprintf (plotHandle->pipe, "set yrange[-%1.3le:%1.3le]\n", plotHandle->scalingMode, plotHandle->scalingMode);
+            fprintf (plotHandle->pipe, "set xrange[%lf:%lf]\n", plotHandle->xMin, plotHandle->xMax);
+            fprintf (plotHandle->pipe, "set yrange[%lf:%lf]\n", plotHandle->yMin, plotHandle->yMax);
         }
 
         if (plotHandle->highestGraphNumber != 0)
@@ -566,7 +567,7 @@ h_GPC_Plot *gpc_init_pz (const char *plotTitle,
     plotHandle->scalingMode = dimension;                    // Set dimension in handle
     strcpy (plotHandle->plotTitle, plotTitle);              // Set plot title in handle
 
-    fprintf (plotHandle->pipe, "set term wxt 0 title \"%s\" size %d, %d\n", plotHandle->plotTitle, CANVAS_WIDTH, CANVAS_HEIGHT); // Set the plot
+    fprintf (plotHandle->pipe, "set term wxt 0 title \"%s\" size %u, %u\n", plotHandle->plotTitle, CANVAS_WIDTH, CANVAS_HEIGHT); // Set the plot
     fprintf (plotHandle->pipe, "set lmargin at screen %4.8lf\n", PLOT_LMARGIN); // Define the margins so that the graph is 512 pixels wide
     fprintf (plotHandle->pipe, "set rmargin at screen %4.8lf\n", PLOT_RMARGIN);
     fprintf (plotHandle->pipe, "set border back\n");        // Set border behind plot
@@ -778,7 +779,7 @@ h_GPC_Plot *gpc_init_spectrogram (const char *plotTitle,
     plotHandle->numberOf2ndAxisPlotted = 0;                 // We have not plotted any columns
     strcpy (plotHandle->plotTitle, plotTitle);              // Set plot title in handle
 
-    fprintf (plotHandle->pipe, "set term wxt 0 title \"%s\" size %d, %d\n", plotHandle->plotTitle, CANVAS_WIDTH, CANVAS_HEIGHT); // Set the plot
+    fprintf (plotHandle->pipe, "set term wxt 0 title \"%s\" size %u, %u\n", plotHandle->plotTitle, CANVAS_WIDTH, CANVAS_HEIGHT); // Set the plot
     fprintf (plotHandle->pipe, "set lmargin at screen %4.8lf\n", PLOT_LMARGIN); // Define the margins so that the graph is 512 pixels wide
     fprintf (plotHandle->pipe, "set rmargin at screen %4.8lf\n", PLOT_RMARGIN);
     fprintf (plotHandle->pipe, "set border back\n");        // Set border behind plot
@@ -942,7 +943,7 @@ h_GPC_Plot *gpc_init_image (const char *plotTitle,
     plotHandle->numberOf2ndAxisPlotted = 0;                 // We have not plotted any rows
     strcpy (plotHandle->plotTitle, plotTitle);              // Set plot title in handle
 
-    fprintf (plotHandle->pipe, "set term wxt 0 title \"%s\" size %d, %d\n", plotHandle->plotTitle, CANVAS_WIDTH, CANVAS_HEIGHT); // Set the plot
+    fprintf (plotHandle->pipe, "set term wxt 0 title \"%s\" size %u, %u\n", plotHandle->plotTitle, CANVAS_WIDTH, CANVAS_HEIGHT); // Set the plot
     fprintf (plotHandle->pipe, "set lmargin at screen %4.8lf\n", PLOT_LMARGIN); // Define the margins so that the graph is 512 pixels wide
     fprintf (plotHandle->pipe, "set rmargin at screen %4.8lf\n", PLOT_RMARGIN);
     fprintf (plotHandle->pipe, "set border back\n");        // Set border behind plot
@@ -957,7 +958,7 @@ h_GPC_Plot *gpc_init_image (const char *plotTitle,
     }
     else
     {
-        fprintf (plotHandle->pipe, "set zrange [%d:%d]\n", zMin, zMax);
+        fprintf (plotHandle->pipe, "set zrange [%u:%u]\n", zMin, zMax);
     }
 
     fprintf (plotHandle->pipe, "set tics out nomirror scale 0.75\n");  // Tics format
@@ -1017,7 +1018,7 @@ int gpc_plot_image (h_GPC_Plot *plotHandle,
     {
         for (i = 0; i < plotHandle->xAxisLength; i++)       // For every pixel in the row
         {
-          fprintf (plotHandle->pipe, "%d ", pData[i + (j * plotHandle->xAxisLength)]);
+          fprintf (plotHandle->pipe, "%u ", pData[i + (j * plotHandle->xAxisLength)]);
         }
         fprintf (plotHandle->pipe, "\n");                   // End of isoline scan
     }
@@ -1032,6 +1033,48 @@ int gpc_plot_image (h_GPC_Plot *plotHandle,
     return (GPC_NO_ERROR);
 }
 
+/********************************************************
+* Function : gpc_plot_heatmap
+*
+* Parameters :
+*   h_GPC_Plot *plotHandle,
+*   const unsigned int *pData,
+*   const char *pDataName)
+*
+* Return value :
+*   int - error flag
+*
+* Description : Generate the heatmap plot
+*
+********************************************************/
+
+int gpc_plot_heatmap (h_GPC_Plot *plotHandle,
+  const unsigned int *pData,
+  const char *pDataName)
+
+{
+  int i, j;
+
+  fprintf (plotHandle->pipe, "splot '-' matrix title \"%s\" with image\n", pDataName); // Set plot format
+
+  for (j = 0; j < plotHandle->yAxisLength; j++)                 // For every row
+  {
+    for (i = 0; i < plotHandle->xAxisLength; i++)               // For every pixel in the row
+    {
+      fprintf (plotHandle->pipe, "%u ", pData[i + (j * plotHandle->xAxisLength)]);
+    }
+    fprintf (plotHandle->pipe, "\n");                           // End of isoline scan
+  }
+  fprintf (plotHandle->pipe, "\ne\ne\n");                       // End of spectrogram dataset
+
+  fflush (plotHandle->pipe);                                    // Flush the pipe
+
+#if GPC_DEBUG
+  sleep (2000);                                                 // Slow down output so that pipe doesn't overflow when logging results
+#endif
+
+  return (GPC_NO_ERROR);
+}
 
 /********************************************************
 * Function : gpc_init_polar

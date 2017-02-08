@@ -21,6 +21,8 @@ from here : http://gnuplot.info/.
 HISTORY
 =======
 
+  * V3.31   07/02/2017      /dev/nul updated for other OSs. gpc_init_image set cbrange. Replaced %d with %u where appropriate. Fixed XY/PZ label positions.
+
   * V3.30   02/01/2017      Added "logscale x" 2d plot graph type
 
   * V3.20   22/12/2016      Added polar plot graph type. Using %1.3le for data to improve dynamic range

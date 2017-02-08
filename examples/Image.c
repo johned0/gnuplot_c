@@ -11,14 +11,14 @@
 #define IMAGE_SIZE                  (IMAGE_X_DIMENSION * IMAGE_Y_DIMENSION)
 
 // Declare global variables and arrays
-unsigned char image [IMAGE_SIZE];
+unsigned char imageLine [IMAGE_X_DIMENSION];
+unsigned int image [IMAGE_SIZE];
 
 int main(void)
 {
     FILE            *fp;
-    h_GPC_Plot *hImage;                             // Plot object
-    int i;
-    unsigned char *pImage = image;
+    h_GPC_Plot      *hImage;                        // Plot object
+    int             i;
 
     hImage =                                        // Initialize plot
         gpc_init_image ("Image",                    // Plot title
@@ -41,9 +41,11 @@ int main(void)
         exit (10);
     }
 
-    for (i = 0; i < IMAGE_Y_DIMENSION; i++)
+    for (i = 0; i < IMAGE_Y_DIMENSION; i++)         // Read image and convert from unsigned char to unsigned int
     {
-        fread (pImage + (i * IMAGE_X_DIMENSION), sizeof (unsigned char), IMAGE_X_DIMENSION, fp);
+        fread (imageLine, sizeof (unsigned char), IMAGE_X_DIMENSION, fp);
+        for (int j = 0; j < IMAGE_X_DIMENSION; j++)
+            image[(i * IMAGE_X_DIMENSION) + j] = (unsigned int)imageLine[j];
     }
 
     if ((fclose (fp)) != 0 )
@@ -55,7 +57,7 @@ int main(void)
     printf ("Image display\n");
 
     gpc_plot_image (hImage,                         // Graph handle
-                    pImage,                         // Data array
+                    image,                          // Data array
                     "Lena");                        // Dataset title
 
     printf ("\nHit <CR> to continue ....\n"); getchar ();   // Clear keyboard buffer and wait for <CR>

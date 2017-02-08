@@ -21,7 +21,7 @@ from here : http://gnuplot.info/.
 HISTORY
 =======
 
-  * V3.31   07/02/2017      /dev/nul updated for other OSs. gpc_init_image set cbrange. Replaced %d with %u where appropriate. Fixed XY/PZ label positions.
+  * V3.31   07/02/2017      /dev/nul updated for other OSs. gpc_init_image set cbrange. Replaced %d with %u where appropriate. Fixed XY/PZ label positions. gpc_plot_image now plots unsigned int data.
 
   * V3.30   02/01/2017      Added "logscale x" 2d plot graph type
 
@@ -51,7 +51,7 @@ For full details see "Gnuplot_C Users Guide.pdf"
 LICENSE
 =======
 
-For full details see "Gnuplot_C Users Guide.pdf"
+This software is released under the terms of the MIT License. For full details see "Gnuplot_C Users Guide.pdf"
 
 This software has been written by Sigma Numerix Ltd. and placed in the public domain.
 

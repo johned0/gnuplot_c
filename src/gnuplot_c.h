@@ -181,7 +181,7 @@ h_GPC_Plot *gpc_init_image (const char *plotTitle,  // Plot title
     const enum gpcKeyMode keyMode);                 // Legend / key mode
 
 int gpc_plot_image (h_GPC_Plot *plotHandle,         // Plot handle
-    const unsigned char *pData,                     // Dataset pointer
+    const unsigned int *pData,                      // Dataset pointer
     const char *pDataName);                         // Dataset title
 
 h_GPC_Plot *gpc_init_polar (const char *plotTitle,  // Plot title

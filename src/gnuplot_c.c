@@ -999,7 +999,7 @@ h_GPC_Plot *gpc_init_image (const char *plotTitle,
 *
 * Parameters :
 *   h_GPC_Plot *plotHandle,
-*   const unsigned char *pData,
+*   const unsigned int *pData,
 *   const char *pDataName)
 *
 * Return value :
@@ -1010,7 +1010,7 @@ h_GPC_Plot *gpc_init_image (const char *plotTitle,
 ********************************************************/
 
 int gpc_plot_image (h_GPC_Plot *plotHandle,
-    const unsigned char *pData,
+    const unsigned int *pData,
     const char *pDataName)
 
 {

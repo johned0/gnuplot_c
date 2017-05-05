@@ -12,9 +12,8 @@
 #if defined (_MSC_VER)              // Defined by Microsoft compilers
     #include <windows.h>
     #if (GPC_DEBUG == 1)
-        #define GNUPLOT_CMD "pgnuplot"                      // Window pipe version
-        // #define GNUPLOT_CMD "gnuplot"                    // Do not pipe the text output to null so that it can be used for debugging
-        // #define GNUPLOT_CMD "gnuplot > debug.log 2>&1"   // Pipe the text output to debug.log for debugging
+        // #define GNUPLOT_CMD "gnuplot"                       // Do not pipe the text output to null so that it can be used for debugging
+        #define GNUPLOT_CMD "gnuplot > debug.log 2>&1"      // Pipe the text output to debug.log for debugging
     #else
         #define GNUPLOT_CMD "gnuplot > /nul 2>&1"           // Pipe the text output to null for higher performance
     #endif
@@ -22,17 +21,20 @@
     #define pclose _pclose
     #define mssleep Sleep
     // #pragma warning(disable:4996)                           // -D "_CRT_SECURE_NO_WARNINGS=1"
-#else    
-  #include <unistd.h>
-  #include <time.h>
-                           // Use GNU compiler
-  #if (GPC_DEBUG == 1)
-    #define GNUPLOT_CMD "tee debug.log | gnuplot -persist"      // Do not pipe the text output to null so that it can be used for debugging
-    // #define GNUPLOT_CMD "gnuplot > debug.log"          // Pipe the text output to debug.log for debugging
-  #else
-    #define GNUPLOT_CMD "gnuplot > /dev/null 2>&1"        // Pipe the text output to null for higher performance
-  #endif
-  #define mssleep(u) usleep(u*1000)
+#else                               // Use GNU compiler
+    #include <unistd.h>
+    #include <time.h>
+    #if (GPC_DEBUG == 1)
+        #define GNUPLOT_CMD "tee debug.log | gnuplot -persist"    // Do not pipe the text output to null so that it can be used for debugging
+        // #define GNUPLOT_CMD "gnuplot > debug.log"          // Pipe the text output to debug.log for debugging
+    #else
+        #if ((__unix) || (__MACH__))                        // Linux / OS X
+            #define GNUPLOT_CMD "gnuplot > /dev/null 2>&1"  // Pipe the text output to null for higher performance
+        #else
+            #define GNUPLOT_CMD "gnuplot > /dev/nul 2>&1"   // Pipe the text output to null for higher performance
+        #endif
+    #endif
+    #define mssleep(u) usleep(u*1000)
 #endif
 
 /********************************************************
@@ -311,7 +313,7 @@ int gpc_plot_2d (h_GPC_Plot *plotHandle,
             do                                              // Create a unique local filename - Note this is NOT MT safe !
             {
                 i++;
-                sprintf (tmpFilename, "%d-0.gpdt", i);
+                sprintf (tmpFilename, "%u-0.gpdt", i);
             } while (stat (tmpFilename, &fileStatBuffer) == 0);
             plotHandle->filenameRootId = i;
         }
@@ -324,7 +326,7 @@ int gpc_plot_2d (h_GPC_Plot *plotHandle,
             }
         }
 
-        sprintf (plotHandle->graphArray[plotHandle->highestGraphNumber].filename, "%d-%d.gpdt", plotHandle->filenameRootId, plotHandle->highestGraphNumber);
+        sprintf (plotHandle->graphArray[plotHandle->highestGraphNumber].filename, "%u-%u.gpdt", plotHandle->filenameRootId, plotHandle->highestGraphNumber);
         sprintf (plotHandle->graphArray[plotHandle->highestGraphNumber].title, "%s", pDataName);
         sprintf (plotHandle->graphArray[plotHandle->highestGraphNumber].formatString, "%s lc rgb \"%s\"", plotType, pColour);
 
@@ -360,10 +362,227 @@ int gpc_plot_2d (h_GPC_Plot *plotHandle,
         fprintf (plotHandle->pipe, "e\n");                  // End of dataset
     }                                                       // End of GPC_MULTIPLOT/GPC_FASTPLOT
 
+//    fprintf (plotHandle->pipe, "refresh\n");
+//    fprintf (plotHandle->pipe, "reread\n");
+//    fprintf (plotHandle->pipe, "set yticks auto\n");
+//    fprintf (plotHandle->pipe, "replot\n");
+
     fflush (plotHandle->pipe);                              // Flush the pipe
 
 #if GPC_DEBUG
     mssleep (100);                                          // Slow down output so that pipe doesn't overflow when logging results
+#endif
+
+    return (GPC_NO_ERROR);
+}
+
+
+/********************************************************
+* Function : gpc_init_2d_dual_plot
+*
+* Parameters :
+*   const char *plotTitle,
+*   const enum gpcKeyMode keyMode)
+*
+* Return value :
+*   h_GPC_Plot - Plot handle
+*
+* Description : Initialize the 2d plot
+*
+********************************************************/
+
+h_GPC_Plot *gpc_init_2d_dual_plot (const char *plotTitle,
+    const enum gpcKeyMode keyMode)
+
+{
+    h_GPC_Plot *plotHandle;                                     // Create plot
+
+    plotHandle = (h_GPC_Plot*) malloc (sizeof (h_GPC_Plot));    // Malloc plot and check for error
+    if (plotHandle == NULL)
+    {
+        return (plotHandle);
+    }
+
+    plotHandle->pipe = popen (GNUPLOT_CMD, "w");                // Open pipe to Gnuplot and check for error
+    if (plotHandle->pipe == NULL)
+    {
+        printf ("\n\nGnuplot/C Error\n");
+        printf ("Gnuplot/C can not find the required Gnuplot executable.\n");
+        printf ("Please ensure you have installed Gnuplot from (http://www.gnuplot.info)\n");
+        printf ("and that the executable program is located in the system PATH.\n\n");
+
+        free (plotHandle);
+        return (plotHandle);
+    }
+
+    strcpy (plotHandle->plotTitle, plotTitle);                  // Set plot title in handle
+    fprintf (plotHandle->pipe, "set term wxt 0 title \"%s\" size %u, %u\n", plotHandle->plotTitle, CANVAS_WIDTH, CANVAS_HEIGHT); // Set the plot
+    fprintf (plotHandle->pipe, "set lmargin at screen %4.8lf\n", PLOT_LMARGIN); // Define the margins so that the graph is 512 pixels wide
+    fprintf (plotHandle->pipe, "set rmargin at screen %4.8lf\n", PLOT_RMARGIN);
+    fprintf (plotHandle->pipe, "set border back\n");            // Set border behind plot
+
+    fprintf (plotHandle->pipe, "set multiplot layout 2, 1\n");  // Set 2 x 1 multiplot
+
+    if (keyMode == GPC_KEY_ENABLE)
+    {
+        fprintf (plotHandle->pipe, "set key out vert nobox\n"); // Legend / key location
+    }
+    else
+    {
+        fprintf (plotHandle->pipe, "unset key\n");              // Disable legend / key
+    }
+
+    fflush (plotHandle->pipe);                                  // flush the pipe
+
+    return (plotHandle);
+}
+
+
+/********************************************************
+* Function : gpc_plot_2d_dual_plot
+*
+* Parameters :
+*   h_GPC_Plot *plotHandle,
+*   const char *xLabel,
+*   const double xMin,
+*   const double xMax,
+*   const double *pData1,
+*   const char *pDataName1,
+*   const char *plotType1,
+*   const char *pColour1,
+*   const char *yLabel1,
+*   const double scalingMode1,
+*   const enum gpcPlotSignMode signMode1,
+*   const double *pData2,
+*   const char *pDataName2,
+*   const char *plotType2,
+*   const char *pColour2,
+*   const char *yLabel2,
+*   const double scalingMode2,
+*   const enum gpcPlotSignMode signMode2,
+*   const int graphLength)
+*
+* Return value :
+*   int - error flag
+*
+* Description : Generate the 2d dual plot
+*
+********************************************************/
+
+int gpc_plot_2d_dual_plot (h_GPC_Plot *plotHandle,
+    const char *xLabel,
+    const double xMin,
+    const double xMax,
+    const double *pData1,
+    const char *pDataName1,
+    const char *plotType1,
+    const char *pColour1,
+    const char *yLabel1,
+    const double scalingMode1,
+    const enum gpcPlotSignMode signMode1,
+    const double *pData2,
+    const char *pDataName2,
+    const char *plotType2,
+    const char *pColour2,
+    const char *yLabel2,
+    const double scalingMode2,
+    const enum gpcPlotSignMode signMode2,
+    const int graphLength)
+
+{
+    int   i;
+
+    fprintf (plotHandle->pipe, "set origin 0.0,0.0\n");
+    fprintf (plotHandle->pipe, "set size 1.0,1.0\n");
+    fprintf (plotHandle->pipe, "clear\n");                      // Clear the plot
+
+    fprintf (plotHandle->pipe, "set multiplot previous\n");     // Select plot #1
+
+// Plot #1
+    fprintf (plotHandle->pipe, "set xlabel \"%s\"\n", xLabel);  // Set the X label
+
+    fprintf (plotHandle->pipe, "set ylabel \"%s\"\n", yLabel1); // Set the Y label
+    fprintf (plotHandle->pipe, "set grid x y\n");               // Turn on the grid
+    fprintf (plotHandle->pipe, "set tics out nomirror\n");      // Tics format
+
+    fprintf (plotHandle->pipe, "set mxtics 4\n");
+    fprintf (plotHandle->pipe, "set mytics 2\n");
+
+
+    if (scalingMode1 == GPC_AUTO_SCALE)                         // Set the Y axis scaling
+    {
+        fprintf (plotHandle->pipe, "set autoscale  yfix\n");    // Auto-scale Y axis
+    }
+    else
+    {
+        if (signMode1 == GPC_SIGNED)                            // Signed numbers (positive and negative)
+        {
+            fprintf (plotHandle->pipe, "set yrange [%1.3le:%1.3le]\n", -scalingMode1, scalingMode1);
+        }
+        else if (signMode1 == GPC_POSITIVE)                     // 0 to +ve Max
+        {
+            fprintf (plotHandle->pipe, "set yrange [0.0:%1.3le]\n", scalingMode1);
+        }
+        else                                                    // GPC_NEGAIVE - -ve Min to 0
+        {
+            fprintf (plotHandle->pipe, "set yrange [%1.3le:0.0]\n", -scalingMode1);
+        }
+    }
+
+    fprintf (plotHandle->pipe, "plot '-' using 1:2 title \"%s\" with %s lc rgb \"%s\"\n", pDataName1, plotType1, pColour1);  // Set plot format
+    for (i = 0; i < graphLength; i++)                           // Copy the data to gnuplot
+    {
+        fprintf (plotHandle->pipe, "%1.3le %1.3le\n", xMin + ((((double)i) * (xMax - xMin)) / ((double)(graphLength - 1))), pData1[i]);
+    }
+    fprintf (plotHandle->pipe, "e\n");                          // End of dataset
+
+
+
+// Plot #2
+//    fprintf (plotHandle->pipe, "set multiplot next\n");         // Select plot #2
+
+    fprintf (plotHandle->pipe, "set xlabel \"%s\"\n", xLabel);  // Set the X label
+
+    fprintf (plotHandle->pipe, "set ylabel \"%s\"\n", yLabel2); // Set the Y label
+    fprintf (plotHandle->pipe, "set grid x y\n");               // Turn on the grid
+    fprintf (plotHandle->pipe, "set tics out nomirror\n");      // Tics format
+
+    fprintf (plotHandle->pipe, "set mxtics 4\n");
+    fprintf (plotHandle->pipe, "set mytics 2\n");
+
+
+    if (scalingMode2 == GPC_AUTO_SCALE)                         // Set the Y axis scaling
+    {
+        fprintf (plotHandle->pipe, "set autoscale  yfix\n");    // Auto-scale Y axis
+    }
+    else
+    {
+        if (signMode2 == GPC_SIGNED)                            // Signed numbers (positive and negative)
+        {
+            fprintf (plotHandle->pipe, "set yrange [%1.3le:%1.3le]\n", -scalingMode2, scalingMode2);
+        }
+        else if (signMode2 == GPC_POSITIVE)                     // 0 to +ve Max
+        {
+            fprintf (plotHandle->pipe, "set yrange [0.0:%1.3le]\n", scalingMode2);
+        }
+        else                                                    // GPC_NEGAIVE - -ve Min to 0
+        {
+            fprintf (plotHandle->pipe, "set yrange [%1.3le:0.0]\n", -scalingMode2);
+        }
+    }
+
+    fprintf (plotHandle->pipe, "plot '-' using 1:2 title \"%s\" with %s lc rgb \"%s\"\n", pDataName2, plotType2, pColour2);  // Set plot format
+    for (i = 0; i < graphLength; i++)                           // Copy the data to gnuplot
+    {
+        fprintf (plotHandle->pipe, "%1.3le %1.3le\n", xMin + ((((double)i) * (xMax - xMin)) / ((double)(graphLength - 1))), pData2[i]);
+    }
+    fprintf (plotHandle->pipe, "e\n");                          // End of dataset
+
+
+    fflush (plotHandle->pipe);                                  // Flush the pipe
+
+#if GPC_DEBUG
+    mssleep (100);                                              // Slow down output so that pipe doesn't overflow when logging results
 #endif
 
     return (GPC_NO_ERROR);
@@ -423,8 +642,8 @@ h_GPC_Plot *gpc_init_xy (const char *plotTitle,
     fprintf (plotHandle->pipe, "set rmargin at screen %4.8lf\n", PLOT_RMARGIN);
     fprintf (plotHandle->pipe, "set border back\n");        // Set border behind plot
 
-    fprintf (plotHandle->pipe, "set xlabel \"%s\"\n", xLabel);  // Axis labels look better when rotated
-    fprintf (plotHandle->pipe, "set ylabel \"%s\"\n", yLabel);
+    fprintf (plotHandle->pipe, "set xlabel \'%s\' offset graph 0.45,0.45\n", xLabel);
+    fprintf (plotHandle->pipe, "set ylabel \'%s\' offset graph 0.55,-0.45\n", yLabel);
     fprintf (plotHandle->pipe, "set nokey\n");
 
     fprintf (plotHandle->pipe, "unset border\n");
@@ -488,8 +707,8 @@ int gpc_plot_xy (h_GPC_Plot *plotHandle,
         }
         else
         {
-            fprintf (plotHandle->pipe, "set xrange[%lf:%lf]\n", plotHandle->xMin, plotHandle->xMax);
-            fprintf (plotHandle->pipe, "set yrange[%lf:%lf]\n", plotHandle->yMin, plotHandle->yMax);
+            fprintf (plotHandle->pipe, "set xrange[-%1.3le:%1.3le]\n", plotHandle->scalingMode, plotHandle->scalingMode);
+            fprintf (plotHandle->pipe, "set yrange[-%1.3le:%1.3le]\n", plotHandle->scalingMode, plotHandle->scalingMode);
         }
 
         if (plotHandle->highestGraphNumber != 0)
@@ -575,15 +794,15 @@ h_GPC_Plot *gpc_init_pz (const char *plotTitle,
     fprintf (plotHandle->pipe, "set size square\n");
     fprintf (plotHandle->pipe, "set tics scale 0.75\n");
 
-    fprintf (plotHandle->pipe, "set ylabel \"Real\"\n");
-    fprintf (plotHandle->pipe, "set xlabel \"Imaginary\"\n");
-    fprintf (plotHandle->pipe, "set nokey\n");
-
     fprintf (plotHandle->pipe, "unset border\n");
     fprintf (plotHandle->pipe, "set xtics axis nomirror\n");
     fprintf (plotHandle->pipe, "set ytics axis nomirror\n");
     fprintf (plotHandle->pipe, "unset rtics\n");
     fprintf (plotHandle->pipe, "set zeroaxis\n");
+
+    fprintf (plotHandle->pipe, "set nokey\n");
+    fprintf (plotHandle->pipe, "set xlabel \'Real\' offset graph 0.45,0.45\n");
+    fprintf (plotHandle->pipe, "set ylabel \'Imaginary\' offset graph 0.55,-0.45\n");
 
                                                             // Define line styles for Poles, Zeros and unit circle
     fprintf (plotHandle->pipe, "set style line 1 lc rgb \"#ff0000\" lt 1 lw 1   pt 2 ps 1.5\n");    // Poles - Red
@@ -959,6 +1178,7 @@ h_GPC_Plot *gpc_init_image (const char *plotTitle,
     else
     {
         fprintf (plotHandle->pipe, "set zrange [%u:%u]\n", zMin, zMax);
+        fprintf (plotHandle->pipe, "set cbrange [%u:%u]\n", zMin, zMax);
     }
 
     fprintf (plotHandle->pipe, "set tics out nomirror scale 0.75\n");  // Tics format
@@ -995,7 +1215,7 @@ h_GPC_Plot *gpc_init_image (const char *plotTitle,
 *
 * Parameters :
 *   h_GPC_Plot *plotHandle,
-*   const unsigned char *pData,
+*   const unsigned int *pData,
 *   const char *pDataName)
 *
 * Return value :
@@ -1006,7 +1226,7 @@ h_GPC_Plot *gpc_init_image (const char *plotTitle,
 ********************************************************/
 
 int gpc_plot_image (h_GPC_Plot *plotHandle,
-    const unsigned char *pData,
+    const unsigned int *pData,
     const char *pDataName)
 
 {
@@ -1033,48 +1253,6 @@ int gpc_plot_image (h_GPC_Plot *plotHandle,
     return (GPC_NO_ERROR);
 }
 
-/********************************************************
-* Function : gpc_plot_heatmap
-*
-* Parameters :
-*   h_GPC_Plot *plotHandle,
-*   const unsigned int *pData,
-*   const char *pDataName)
-*
-* Return value :
-*   int - error flag
-*
-* Description : Generate the heatmap plot
-*
-********************************************************/
-
-int gpc_plot_heatmap (h_GPC_Plot *plotHandle,
-  const unsigned int *pData,
-  const char *pDataName)
-
-{
-  int i, j;
-
-  fprintf (plotHandle->pipe, "splot '-' matrix title \"%s\" with image\n", pDataName); // Set plot format
-
-  for (j = 0; j < plotHandle->yAxisLength; j++)                 // For every row
-  {
-    for (i = 0; i < plotHandle->xAxisLength; i++)               // For every pixel in the row
-    {
-      fprintf (plotHandle->pipe, "%u ", pData[i + (j * plotHandle->xAxisLength)]);
-    }
-    fprintf (plotHandle->pipe, "\n");                           // End of isoline scan
-  }
-  fprintf (plotHandle->pipe, "\ne\ne\n");                       // End of spectrogram dataset
-
-  fflush (plotHandle->pipe);                                    // Flush the pipe
-
-#if GPC_DEBUG
-  sleep (2000);                                                 // Slow down output so that pipe doesn't overflow when logging results
-#endif
-
-  return (GPC_NO_ERROR);
-}
 
 /********************************************************
 * Function : gpc_init_polar
@@ -1119,6 +1297,7 @@ h_GPC_Plot *gpc_init_polar (const char *plotTitle,
     }
 
     plotHandle->tempFilesUsedFlag = GPC_TRUE;               // Temporary files used - need to delete them in gpc_close ()
+    plotHandle->filenameRootId = -1;                        // Initialize filename root id
     strcpy (plotHandle->plotTitle, plotTitle);              // Set plot title in handle
 
     fprintf (plotHandle->pipe, "set polar\n");
@@ -1136,11 +1315,11 @@ h_GPC_Plot *gpc_init_polar (const char *plotTitle,
     fprintf (plotHandle->pipe, "unset xtics\n");
     fprintf (plotHandle->pipe, "unset ytics\n");
 
-    fprintf (plotHandle->pipe, "minGain=%d\n", (int)gMin);                      // # Minimum gain
-    fprintf (plotHandle->pipe, "f_maxGain=%lf\n", gMax);                        // # Maximum gain
-    fprintf (plotHandle->pipe, "tickstep = 10\n");                              // # Ticks every 10 dB
-    fprintf (plotHandle->pipe, "numticks = %d\n", (int)((gMax - gMin) / 10.));  // # numticks = r / tickstep :: Don't use divide because numticks is used in for loop and doesn't work
-    fprintf (plotHandle->pipe, "f_numticks = %lf\n", (gMax - gMin) / 10.);      // # Floating point numticks
+    fprintf (plotHandle->pipe, "minGain=%d\n", (int)gMin);                          // # Minimum gain
+    fprintf (plotHandle->pipe, "f_maxGain=%lf\n", gMax);                            // # Maximum gain
+    fprintf (plotHandle->pipe, "tickstep = 10\n");                                  // # Ticks every 10 dB
+    fprintf (plotHandle->pipe, "numticks = %u\n", (unsigned)((gMax - gMin) / 10.)); // # numticks = r / tickstep :: Don't use divide because numticks is used in for loop and doesn't work
+    fprintf (plotHandle->pipe, "f_numticks = %lf\n", (gMax - gMin) / 10.);          // # Floating point numticks
 
 
     fprintf (plotHandle->pipe, "set rrange [minGain:0]\n");
@@ -1206,7 +1385,7 @@ int gpc_plot_polar (h_GPC_Plot *plotHandle,
 
     if (addMode == GPC_NEW)                             // GPC_NEW
     {
-        if (plotHandle->filenameRootId != -1)           // If NOT called immediately after gpc_init_2d () remove existing graphs
+        if (plotHandle->filenameRootId != -1)           // If NOT called immediately after gpc_init_polar () remove existing graphs
         {
             for (i = 0; i <= plotHandle->highestGraphNumber; i++)   // Remove all temporary files
             {
@@ -1220,7 +1399,7 @@ int gpc_plot_polar (h_GPC_Plot *plotHandle,
         do                                              // Create a unique local filename - Note this is NOT MT safe !
         {
             i++;
-            sprintf (tmpFilename, "%d-0.gpdt", i);
+            sprintf (tmpFilename, "%u-0.gpdt", i);
         } while (stat (tmpFilename, &fileStatBuffer) == 0);
         plotHandle->filenameRootId = i;
     }
@@ -1233,7 +1412,7 @@ int gpc_plot_polar (h_GPC_Plot *plotHandle,
         }
     }
 
-    sprintf (plotHandle->graphArray[plotHandle->highestGraphNumber].filename, "%d-%d.gpdt", plotHandle->filenameRootId, plotHandle->highestGraphNumber);
+    sprintf (plotHandle->graphArray[plotHandle->highestGraphNumber].filename, "%u-%u.gpdt", plotHandle->filenameRootId, plotHandle->highestGraphNumber);
     sprintf (plotHandle->graphArray[plotHandle->highestGraphNumber].title, "%s", pDataName);
     sprintf (plotHandle->graphArray[plotHandle->highestGraphNumber].formatString, "%s lc rgb \"%s\"", plotType, pColour);
 
@@ -1244,7 +1423,6 @@ int gpc_plot_polar (h_GPC_Plot *plotHandle,
     }
     fclose (gpdtFile);
     mssleep (100);                                          // Slow down file accesses to avoid missing data
-
 
     fprintf (plotHandle->pipe, "plot \"%s\" u (-$1+90.):($2-f_maxGain) t \"%s\" w %s", plotHandle->graphArray[0].filename, plotHandle->graphArray[0].title, plotHandle->graphArray[0].formatString);  // Send start of plot and first plot command
     for (i = 1; i <= plotHandle->highestGraphNumber; i++)   // Send individual plot commands

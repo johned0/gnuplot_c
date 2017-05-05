@@ -12,9 +12,8 @@
 #if defined (_MSC_VER)              // Defined by Microsoft compilers
     #include <windows.h>
     #if (GPC_DEBUG == 1)
-        #define GNUPLOT_CMD "pgnuplot"                      // Window pipe version
-        // #define GNUPLOT_CMD "gnuplot"                    // Do not pipe the text output to null so that it can be used for debugging
-        // #define GNUPLOT_CMD "gnuplot > debug.log 2>&1"   // Pipe the text output to debug.log for debugging
+        // #define GNUPLOT_CMD "gnuplot"                       // Do not pipe the text output to null so that it can be used for debugging
+        #define GNUPLOT_CMD "gnuplot > debug.log 2>&1"      // Pipe the text output to debug.log for debugging
     #else
         #define GNUPLOT_CMD "gnuplot > /nul 2>&1"           // Pipe the text output to null for higher performance
     #endif
@@ -363,10 +362,227 @@ int gpc_plot_2d (h_GPC_Plot *plotHandle,
         fprintf (plotHandle->pipe, "e\n");                  // End of dataset
     }                                                       // End of GPC_MULTIPLOT/GPC_FASTPLOT
 
+//    fprintf (plotHandle->pipe, "refresh\n");
+//    fprintf (plotHandle->pipe, "reread\n");
+//    fprintf (plotHandle->pipe, "set yticks auto\n");
+//    fprintf (plotHandle->pipe, "replot\n");
+
     fflush (plotHandle->pipe);                              // Flush the pipe
 
 #if GPC_DEBUG
     mssleep (100);                                          // Slow down output so that pipe doesn't overflow when logging results
+#endif
+
+    return (GPC_NO_ERROR);
+}
+
+
+/********************************************************
+* Function : gpc_init_2d_dual_plot
+*
+* Parameters :
+*   const char *plotTitle,
+*   const enum gpcKeyMode keyMode)
+*
+* Return value :
+*   h_GPC_Plot - Plot handle
+*
+* Description : Initialize the 2d plot
+*
+********************************************************/
+
+h_GPC_Plot *gpc_init_2d_dual_plot (const char *plotTitle,
+    const enum gpcKeyMode keyMode)
+
+{
+    h_GPC_Plot *plotHandle;                                     // Create plot
+
+    plotHandle = (h_GPC_Plot*) malloc (sizeof (h_GPC_Plot));    // Malloc plot and check for error
+    if (plotHandle == NULL)
+    {
+        return (plotHandle);
+    }
+
+    plotHandle->pipe = popen (GNUPLOT_CMD, "w");                // Open pipe to Gnuplot and check for error
+    if (plotHandle->pipe == NULL)
+    {
+        printf ("\n\nGnuplot/C Error\n");
+        printf ("Gnuplot/C can not find the required Gnuplot executable.\n");
+        printf ("Please ensure you have installed Gnuplot from (http://www.gnuplot.info)\n");
+        printf ("and that the executable program is located in the system PATH.\n\n");
+
+        free (plotHandle);
+        return (plotHandle);
+    }
+
+    strcpy (plotHandle->plotTitle, plotTitle);                  // Set plot title in handle
+    fprintf (plotHandle->pipe, "set term wxt 0 title \"%s\" size %u, %u\n", plotHandle->plotTitle, CANVAS_WIDTH, CANVAS_HEIGHT); // Set the plot
+    fprintf (plotHandle->pipe, "set lmargin at screen %4.8lf\n", PLOT_LMARGIN); // Define the margins so that the graph is 512 pixels wide
+    fprintf (plotHandle->pipe, "set rmargin at screen %4.8lf\n", PLOT_RMARGIN);
+    fprintf (plotHandle->pipe, "set border back\n");            // Set border behind plot
+
+    fprintf (plotHandle->pipe, "set multiplot layout 2, 1\n");  // Set 2 x 1 multiplot
+
+    if (keyMode == GPC_KEY_ENABLE)
+    {
+        fprintf (plotHandle->pipe, "set key out vert nobox\n"); // Legend / key location
+    }
+    else
+    {
+        fprintf (plotHandle->pipe, "unset key\n");              // Disable legend / key
+    }
+
+    fflush (plotHandle->pipe);                                  // flush the pipe
+
+    return (plotHandle);
+}
+
+
+/********************************************************
+* Function : gpc_plot_2d_dual_plot
+*
+* Parameters :
+*   h_GPC_Plot *plotHandle,
+*   const char *xLabel,
+*   const double xMin,
+*   const double xMax,
+*   const double *pData1,
+*   const char *pDataName1,
+*   const char *plotType1,
+*   const char *pColour1,
+*   const char *yLabel1,
+*   const double scalingMode1,
+*   const enum gpcPlotSignMode signMode1,
+*   const double *pData2,
+*   const char *pDataName2,
+*   const char *plotType2,
+*   const char *pColour2,
+*   const char *yLabel2,
+*   const double scalingMode2,
+*   const enum gpcPlotSignMode signMode2,
+*   const int graphLength)
+*
+* Return value :
+*   int - error flag
+*
+* Description : Generate the 2d dual plot
+*
+********************************************************/
+
+int gpc_plot_2d_dual_plot (h_GPC_Plot *plotHandle,
+    const char *xLabel,
+    const double xMin,
+    const double xMax,
+    const double *pData1,
+    const char *pDataName1,
+    const char *plotType1,
+    const char *pColour1,
+    const char *yLabel1,
+    const double scalingMode1,
+    const enum gpcPlotSignMode signMode1,
+    const double *pData2,
+    const char *pDataName2,
+    const char *plotType2,
+    const char *pColour2,
+    const char *yLabel2,
+    const double scalingMode2,
+    const enum gpcPlotSignMode signMode2,
+    const int graphLength)
+
+{
+    int   i;
+
+    fprintf (plotHandle->pipe, "set origin 0.0,0.0\n");
+    fprintf (plotHandle->pipe, "set size 1.0,1.0\n");
+    fprintf (plotHandle->pipe, "clear\n");                      // Clear the plot
+
+    fprintf (plotHandle->pipe, "set multiplot previous\n");     // Select plot #1
+
+// Plot #1
+    fprintf (plotHandle->pipe, "set xlabel \"%s\"\n", xLabel);  // Set the X label
+
+    fprintf (plotHandle->pipe, "set ylabel \"%s\"\n", yLabel1); // Set the Y label
+    fprintf (plotHandle->pipe, "set grid x y\n");               // Turn on the grid
+    fprintf (plotHandle->pipe, "set tics out nomirror\n");      // Tics format
+
+    fprintf (plotHandle->pipe, "set mxtics 4\n");
+    fprintf (plotHandle->pipe, "set mytics 2\n");
+
+
+    if (scalingMode1 == GPC_AUTO_SCALE)                         // Set the Y axis scaling
+    {
+        fprintf (plotHandle->pipe, "set autoscale  yfix\n");    // Auto-scale Y axis
+    }
+    else
+    {
+        if (signMode1 == GPC_SIGNED)                            // Signed numbers (positive and negative)
+        {
+            fprintf (plotHandle->pipe, "set yrange [%1.3le:%1.3le]\n", -scalingMode1, scalingMode1);
+        }
+        else if (signMode1 == GPC_POSITIVE)                     // 0 to +ve Max
+        {
+            fprintf (plotHandle->pipe, "set yrange [0.0:%1.3le]\n", scalingMode1);
+        }
+        else                                                    // GPC_NEGAIVE - -ve Min to 0
+        {
+            fprintf (plotHandle->pipe, "set yrange [%1.3le:0.0]\n", -scalingMode1);
+        }
+    }
+
+    fprintf (plotHandle->pipe, "plot '-' using 1:2 title \"%s\" with %s lc rgb \"%s\"\n", pDataName1, plotType1, pColour1);  // Set plot format
+    for (i = 0; i < graphLength; i++)                           // Copy the data to gnuplot
+    {
+        fprintf (plotHandle->pipe, "%1.3le %1.3le\n", xMin + ((((double)i) * (xMax - xMin)) / ((double)(graphLength - 1))), pData1[i]);
+    }
+    fprintf (plotHandle->pipe, "e\n");                          // End of dataset
+
+
+
+// Plot #2
+//    fprintf (plotHandle->pipe, "set multiplot next\n");         // Select plot #2
+
+    fprintf (plotHandle->pipe, "set xlabel \"%s\"\n", xLabel);  // Set the X label
+
+    fprintf (plotHandle->pipe, "set ylabel \"%s\"\n", yLabel2); // Set the Y label
+    fprintf (plotHandle->pipe, "set grid x y\n");               // Turn on the grid
+    fprintf (plotHandle->pipe, "set tics out nomirror\n");      // Tics format
+
+    fprintf (plotHandle->pipe, "set mxtics 4\n");
+    fprintf (plotHandle->pipe, "set mytics 2\n");
+
+
+    if (scalingMode2 == GPC_AUTO_SCALE)                         // Set the Y axis scaling
+    {
+        fprintf (plotHandle->pipe, "set autoscale  yfix\n");    // Auto-scale Y axis
+    }
+    else
+    {
+        if (signMode2 == GPC_SIGNED)                            // Signed numbers (positive and negative)
+        {
+            fprintf (plotHandle->pipe, "set yrange [%1.3le:%1.3le]\n", -scalingMode2, scalingMode2);
+        }
+        else if (signMode2 == GPC_POSITIVE)                     // 0 to +ve Max
+        {
+            fprintf (plotHandle->pipe, "set yrange [0.0:%1.3le]\n", scalingMode2);
+        }
+        else                                                    // GPC_NEGAIVE - -ve Min to 0
+        {
+            fprintf (plotHandle->pipe, "set yrange [%1.3le:0.0]\n", -scalingMode2);
+        }
+    }
+
+    fprintf (plotHandle->pipe, "plot '-' using 1:2 title \"%s\" with %s lc rgb \"%s\"\n", pDataName2, plotType2, pColour2);  // Set plot format
+    for (i = 0; i < graphLength; i++)                           // Copy the data to gnuplot
+    {
+        fprintf (plotHandle->pipe, "%1.3le %1.3le\n", xMin + ((((double)i) * (xMax - xMin)) / ((double)(graphLength - 1))), pData2[i]);
+    }
+    fprintf (plotHandle->pipe, "e\n");                          // End of dataset
+
+
+    fflush (plotHandle->pipe);                                  // Flush the pipe
+
+#if GPC_DEBUG
+    mssleep (100);                                              // Slow down output so that pipe doesn't overflow when logging results
 #endif
 
     return (GPC_NO_ERROR);
@@ -1081,6 +1297,7 @@ h_GPC_Plot *gpc_init_polar (const char *plotTitle,
     }
 
     plotHandle->tempFilesUsedFlag = GPC_TRUE;               // Temporary files used - need to delete them in gpc_close ()
+    plotHandle->filenameRootId = -1;                        // Initialize filename root id
     strcpy (plotHandle->plotTitle, plotTitle);              // Set plot title in handle
 
     fprintf (plotHandle->pipe, "set polar\n");
@@ -1168,7 +1385,7 @@ int gpc_plot_polar (h_GPC_Plot *plotHandle,
 
     if (addMode == GPC_NEW)                             // GPC_NEW
     {
-        if (plotHandle->filenameRootId != -1)           // If NOT called immediately after gpc_init_2d () remove existing graphs
+        if (plotHandle->filenameRootId != -1)           // If NOT called immediately after gpc_init_polar () remove existing graphs
         {
             for (i = 0; i <= plotHandle->highestGraphNumber; i++)   // Remove all temporary files
             {
@@ -1206,7 +1423,6 @@ int gpc_plot_polar (h_GPC_Plot *plotHandle,
     }
     fclose (gpdtFile);
     mssleep (100);                                          // Slow down file accesses to avoid missing data
-
 
     fprintf (plotHandle->pipe, "plot \"%s\" u (-$1+90.):($2-f_maxGain) t \"%s\" w %s", plotHandle->graphArray[0].filename, plotHandle->graphArray[0].title, plotHandle->graphArray[0].formatString);  // Send start of plot and first plot command
     for (i = 1; i <= plotHandle->highestGraphNumber; i++)   // Send individual plot commands

@@ -21,6 +21,10 @@ from here : http://gnuplot.info/.
 HISTORY
 =======
 
+  * V3.41   05/05/2017      gpc_init_polar fixed bug with initializing "filenameRootId = -1"
+
+  * V3.40   16/03/2017      Added gpc_plot_2d_dual_plot graph type
+
   * V3.31   07/02/2017      /dev/nul updated for other OSs. gpc_init_image set cbrange. Replaced %d with %u where appropriate. Fixed XY/PZ label positions. gpc_plot_image now plots unsigned int data.
 
   * V3.30   02/01/2017      Added "logscale x" 2d plot graph type

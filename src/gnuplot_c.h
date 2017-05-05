@@ -129,6 +129,29 @@ int gpc_plot_2d (h_GPC_Plot *plotHandle,            // Plot handle
     const char *pColour,                            // Colour - Use gnuplot> show colornames to see available colours
     const enum gpcNewAddGraphMode addMode);         // Add / new mode
     
+h_GPC_Plot *gpc_init_2d_dual_plot (const char *plotTitle,   // Plot title
+    const enum gpcKeyMode keyMode);                 // Legend / key mode
+
+int gpc_plot_2d_dual_plot (h_GPC_Plot *plotHandle,  // Plot handle
+    const char *xLabel,                             // X axis label
+    const double xMin,                              // Minimum X value
+    const double xMax,                              // Maximum X value
+    const double *pData1,                           // Dataset #1 pointer
+    const char *pDataName1,                         // Dataset #1 title
+    const char *plotType1,                          // Dataset #1 Plot type - "lines", "points", "impulses", "linespoints"
+    const char *pColour1,                           // Dataset #1 Colour - Use gnuplot> show colornames to see available colours
+    const char *yLabel1,                            // Dataset #1 Y axis label
+    const double scalingMode1,                      // Dataset #1 Scaling mode
+    const enum gpcPlotSignMode signMode1,           // Dataset #1 Sign mode - signed, positive, negative
+    const double *pData2,                           // Dataset #2 pointer
+    const char *pDataName2,                         // Dataset #2 title
+    const char *plotType2,                          // Dataset #2 Plot type - "lines", "points", "impulses", "linespoints"
+    const char *pColour2,                           // Dataset #2 Colour - Use gnuplot> show colornames to see available colours
+    const char *yLabel2,                            // Dataset #2 Y axis label
+    const double scalingMode2,                      // Dataset #2 Scaling mode
+    const enum gpcPlotSignMode signMode2,           // Dataset #2 Sign mode - signed, positive, negative
+    const int graphLength);                         // Dataset lengths
+
 h_GPC_Plot *gpc_init_xy (const char *plotTitle,     // Plot title
     const char *xLabel,                             // X axis label
     const char *yLabel,                             // Y axis label

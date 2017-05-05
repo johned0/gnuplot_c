@@ -11,7 +11,7 @@
 #define IMAGE_SIZE                  (IMAGE_X_DIMENSION * IMAGE_Y_DIMENSION)
 
 // Declare global variables and arrays
-unsigned char imageLine [IMAGE_X_DIMENSION];
+unsigned char imageLine [IMAGE_X_DIMENSION];        // Array for reading line of unsigned chars in from file
 unsigned int image [IMAGE_SIZE];
 
 int main(void)

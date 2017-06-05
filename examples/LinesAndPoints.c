@@ -8,9 +8,9 @@
 #define X_MIN             0.0                             // Minimum X value
 #define X_MAX             ((double)(SAMPLE_LENGTH - 1))   // Maximum X value
 
-h_GPC_Plot *h2DPlot1, *h2DPlot2;          // Declare plot object
+h_GPC_Plot *h2DPlot1, *h2DPlot2;                // Declare plot object
 
-                                          // Declare an arry of fun colours to use
+                                                // Declare an arry of fun colours to use
 const char *plotColour [] = {"purple", "green", "blue", "black", "orange", "cyan", "violet", "grey", "magenta", "light-red"};
 
 char graphTitle [40];
@@ -28,7 +28,6 @@ int main()
                      20.0,                      // Scaling mode
                      // GPC_AUTO_SCALE,            // Scaling mode
                      GPC_SIGNED,                // Sign mode
-                     GPC_MULTIPLOT,             // Multiplot / fast plot mode
                      GPC_KEY_ENABLE);           // Legend / key mode
     
     if (h2DPlot1 == NULL)                       // Plot creation failed - e.g is server running ?
@@ -44,7 +43,6 @@ int main()
                      20.0,                      // Scaling mode
                      // GPC_AUTO_SCALE,            // Scaling mode
                      GPC_NEGATIVE,              // Sign mode
-                     GPC_MULTIPLOT,             // Multiplot / fast plot mode
                      GPC_KEY_ENABLE);           // Legend / key mode
     
     if (h2DPlot2 == NULL)                       // Plot creation failed - e.g is server running ?
@@ -87,7 +85,7 @@ int main()
                          GPC_ADD);              // Add plot
         }
         
-        for (i = 0; i < SAMPLE_LENGTH; i++)          // Fill the array
+        for (i = 0; i < SAMPLE_LENGTH; i++)     // Fill the array
         {
             Array [i] = -(i + j);
         }

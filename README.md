@@ -21,6 +21,14 @@ from here : http://gnuplot.info/.
 HISTORY
 =======
 
+  * V3.50   04/06/2017      Removed all use of temporary files to improve performance
+                            gpcMultiFastModes deprecated and function parameters removed.
+                            Tested with gnuplot v5.1 and v5.2_RC1
+                            MAX_NUM_GRAPHS increased to 100
+                            Fixed the example build batch files to work with the new directory structure, to save having to set environment variables.
+                            Fixed the formatting character to match datatype unsigned int.
+                            Fixed /dev/nul to /dev/null for platforms other than Windows
+
   * V3.41   05/05/2017      gpc_init_polar fixed bug with initializing "filenameRootId = -1"
 
   * V3.40   16/03/2017      Added gpc_plot_2d_dual_plot graph type

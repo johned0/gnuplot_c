@@ -7,8 +7,6 @@
 #include <string.h>
 #include "gnuplot_c.h"
 
-#define GPC_REPLOT 0                // This is being used for testing multiplot/replot which has some strange side effects so is not used in the release
-
 #if defined (_MSC_VER)              // Defined by Microsoft compilers
     #include <windows.h>
     #if (GPC_DEBUG == 1)
@@ -46,7 +44,6 @@
 *   const char *yLabel,
 *   const double scalingMode,
 *   const enum gpcPlotSignMode signMode,
-*   const enum gpcMultiFastMode multiFastMode,
 *   const enum gpcKeyMode keyMode)
 *
 * Return value :
@@ -61,7 +58,6 @@ h_GPC_Plot *gpc_init_2d (const char *plotTitle,
     const char *yLabel,
     const double scalingMode,
     const enum gpcPlotSignMode signMode,
-    const enum gpcMultiFastMode multiFastMode,
     const enum gpcKeyMode keyMode)
 
 {
@@ -86,17 +82,6 @@ h_GPC_Plot *gpc_init_2d (const char *plotTitle,
     }
 
     strcpy (plotHandle->plotTitle, plotTitle);              // Set plot title in handle
-    plotHandle->multiFastMode = multiFastMode;              // Set multiplot / fastplot mode in handle
-
-    if (multiFastMode == GPC_MULTIPLOT)
-    {
-        plotHandle->tempFilesUsedFlag = GPC_TRUE;           // Temporary files used - need to delete them in gpc_close ()
-        plotHandle->filenameRootId = -1;                    // Initialize filename root id
-    }
-    else
-    {
-        plotHandle->tempFilesUsedFlag = GPC_FALSE;          // Temporary files NOT used - DON'T need to delete them in gpc_close ()
-    }
 
     fprintf (plotHandle->pipe, "set term wxt 0 title \"%s\" size %u, %u\n", plotHandle->plotTitle, CANVAS_WIDTH, CANVAS_HEIGHT); // Set the plot
     fprintf (plotHandle->pipe, "set lmargin at screen %4.8lf\n", PLOT_LMARGIN); // Define the margins so that the graph is 512 pixels wide
@@ -154,7 +139,6 @@ h_GPC_Plot *gpc_init_2d (const char *plotTitle,
 *   const char *yLabel,
 *   const double scalingMode,
 *   const enum gpcPlotSignMode signMode,
-*   const enum gpcMultiFastMode multiFastMode,
 *   const enum gpcKeyMode keyMode)
 *
 * Return value :
@@ -169,7 +153,6 @@ h_GPC_Plot *gpc_init_2d_logscalex (const char *plotTitle,
     const char *yLabel,
     const double scalingMode,
     const enum gpcPlotSignMode signMode,
-    const enum gpcMultiFastMode multiFastMode,
     const enum gpcKeyMode keyMode)
 
 {
@@ -194,17 +177,6 @@ h_GPC_Plot *gpc_init_2d_logscalex (const char *plotTitle,
     }
 
     strcpy (plotHandle->plotTitle, plotTitle);              // Set plot title in handle
-    plotHandle->multiFastMode = multiFastMode;              // Set multiplot / fastplot mode in handle
-
-    if (multiFastMode == GPC_MULTIPLOT)
-    {
-        plotHandle->tempFilesUsedFlag = GPC_TRUE;           // Temporary files used - need to delete them in gpc_close ()
-        plotHandle->filenameRootId = -1;                    // Initialize filename root id
-    }
-    else
-    {
-        plotHandle->tempFilesUsedFlag = GPC_FALSE;          // Temporary files NOT used - DON'T need to delete them in gpc_close ()
-    }
 
     fprintf (plotHandle->pipe, "set term wxt 0 title \"%s\" size %u, %u\n", plotHandle->plotTitle, CANVAS_WIDTH, CANVAS_HEIGHT); // Set the plot
     fprintf (plotHandle->pipe, "set lmargin at screen %4.8lf\n", PLOT_LMARGIN); // Define the margins so that the graph is 512 pixels wide
@@ -289,78 +261,38 @@ int gpc_plot_2d (h_GPC_Plot *plotHandle,
 
 {
     int   i;
-    FILE  *gpdtFile;
-    char  tmpFilename [30];
-    struct stat   fileStatBuffer;
 
-    if (plotHandle->multiFastMode == GPC_MULTIPLOT)         // GPC_MULTIPLOT
+    if (addMode == GPC_NEW)                                 // GPC_NEW
     {
-        if (addMode == GPC_NEW)                             // GPC_NEW
-        {
-          // fprintf (plotHandle->pipe, "set autoscale x\n");      // Auto-scale Y axis
-
-            if (plotHandle->filenameRootId != -1)           // If NOT called immediately after gpc_init_2d () remove existing graphs
-            {
-                for (i = 0; i <= plotHandle->highestGraphNumber; i++)   // Remove all temporary files
-                {
-                    remove (plotHandle->graphArray[i].filename);
-                }
-            }
-
-            plotHandle->highestGraphNumber = 0;
-
-            i = -1;
-            do                                              // Create a unique local filename - Note this is NOT MT safe !
-            {
-                i++;
-                sprintf (tmpFilename, "%u-0.gpdt", i);
-            } while (stat (tmpFilename, &fileStatBuffer) == 0);
-            plotHandle->filenameRootId = i;
-        }
-        else                                // GPC_ADD
-        {
-            plotHandle->highestGraphNumber++;
-            if (plotHandle->highestGraphNumber >= (MAX_NUM_GRAPHS - 1)) // Check we haven't overflowed the maximum number of graphs
-            {
-                return (GPC_ERROR);
-            }
-        }
-
-        sprintf (plotHandle->graphArray[plotHandle->highestGraphNumber].filename, "%u-%u.gpdt", plotHandle->filenameRootId, plotHandle->highestGraphNumber);
-        sprintf (plotHandle->graphArray[plotHandle->highestGraphNumber].title, "%s", pDataName);
-        sprintf (plotHandle->graphArray[plotHandle->highestGraphNumber].formatString, "%s lc rgb \"%s\"", plotType, pColour);
-
-        gpdtFile = fopen (plotHandle->graphArray[plotHandle->highestGraphNumber].filename, "w");    // Open temporary files
-        for (i = 0; i < graphLength; i++)                   // Write data to intermediate file
-        {
-            fprintf (gpdtFile, "%1.3le %1.3le\n", xMin + ((((double)i) * (xMax - xMin)) / ((double)(graphLength - 1))), pData[i]);
-        }
-        fclose (gpdtFile);
-        mssleep (100);                                      // Slow down file accesses to avoid missing data
-
-
-        fprintf (plotHandle->pipe, "plot \"%s\" using 1:2 title \"%s\" with %s", plotHandle->graphArray[0].filename, plotHandle->graphArray[0].title, plotHandle->graphArray[0].formatString);  // Send start of plot and first plot command
-        for (i = 1; i <= plotHandle->highestGraphNumber; i++)   // Send individual plot commands
-        {
-            fprintf (plotHandle->pipe, ", \\\n \"%s\" using 1:2 title \"%s\" with %s", plotHandle->graphArray[i].filename, plotHandle->graphArray[i].title, plotHandle->graphArray[i].formatString);  // Set plot format
-        }
-        fprintf (plotHandle->pipe, "\n");                   // Send end of plot command
+        plotHandle->numberOfGraphs = 0;
     }
-    else                                                    // GPC_FASTPLOT
+    else                                                    // GPC_ADD
     {
-        if (addMode == GPC_NEW)
+        plotHandle->numberOfGraphs++;
+        if (plotHandle->numberOfGraphs >= (MAX_NUM_GRAPHS - 1)) // Check we haven't overflowed the maximum number of graphs
         {
-            fprintf (plotHandle->pipe, "set xrange [%1.3le:%1.3le]\n", xMin - (0.5 * ((xMax - xMin) / (graphLength - 1))),
-                                                                 xMax + (0.5 * ((xMax - xMin) / (graphLength - 1))));  // Set length of X axis
+            return (GPC_ERROR);
         }
+    }
 
-        fprintf (plotHandle->pipe, "plot '-' using 1:2 title \"%s\" with %s lc rgb \"%s\"\n", pDataName, plotType, pColour);  // Set plot format
-        for (i = 0; i < graphLength; i++)                   // Copy the data to gnuplot
-        {
-            fprintf (plotHandle->pipe, "%1.3le %1.3le\n", xMin + ((((double)i) * (xMax - xMin)) / ((double)(graphLength - 1))), pData[i]);
-        }
-        fprintf (plotHandle->pipe, "e\n");                  // End of dataset
-    }                                                       // End of GPC_MULTIPLOT/GPC_FASTPLOT
+    sprintf (plotHandle->graphArray[plotHandle->numberOfGraphs].title, "%s", pDataName);
+    sprintf (plotHandle->graphArray[plotHandle->numberOfGraphs].formatString, "%s lc rgb \"%s\"", plotType, pColour);
+
+    fprintf (plotHandle->pipe, "$DATA%d << EOD\n", plotHandle->numberOfGraphs); // Write data to named data block
+    for (i = 0; i < graphLength; i++)
+    {
+        fprintf (plotHandle->pipe, "%1.3le %1.3le\n", xMin + ((((double)i) * (xMax - xMin)) / ((double)(graphLength - 1))), pData[i]);
+    }
+    fprintf (plotHandle->pipe, "EOD\n");
+
+
+    fprintf (plotHandle->pipe, "plot $DATA%d u 1:2 t \"%s\" w %s", 0, plotHandle->graphArray[0].title, plotHandle->graphArray[0].formatString);  // Send start of plot and first plot command
+    for (i = 1; i <= plotHandle->numberOfGraphs; i++)       // Send individual plot commands
+    {
+        fprintf (plotHandle->pipe, ", \\\n $DATA%d u 1:2 t \"%s\" w %s", i, plotHandle->graphArray[i].title, plotHandle->graphArray[i].formatString);  // Set plot format
+    }
+    fprintf (plotHandle->pipe, "\n");                       // Send end of plot command
+
 
 //    fprintf (plotHandle->pipe, "refresh\n");
 //    fprintf (plotHandle->pipe, "reread\n");
@@ -633,7 +565,6 @@ h_GPC_Plot *gpc_init_xy (const char *plotTitle,
         return (plotHandle);
     }
 
-    plotHandle->tempFilesUsedFlag = GPC_FALSE;              // Temporary files NOT used - DON'T need to delete them in gpc_close ()
     plotHandle->scalingMode = dimension;                    // Set dimension in handle
     strcpy (plotHandle->plotTitle, plotTitle);              // Set plot title in handle
 
@@ -711,17 +642,17 @@ int gpc_plot_xy (h_GPC_Plot *plotHandle,
             fprintf (plotHandle->pipe, "set yrange[-%1.3le:%1.3le]\n", plotHandle->scalingMode, plotHandle->scalingMode);
         }
 
-        if (plotHandle->highestGraphNumber != 0)
+        if (plotHandle->numberOfGraphs != 0)
         {
             fprintf (plotHandle->pipe, "unset multiplot\n");    // If there is an existing multiplot then close it
         }
         fprintf (plotHandle->pipe, "set multiplot\n");
 
-        plotHandle->highestGraphNumber = 1;                 // Reset the number of plots
+        plotHandle->numberOfGraphs = 1;                     // Reset the number of plots
     }
-    else                                    // GPC_ADD
+    else                                                    // GPC_ADD
     {
-        plotHandle->highestGraphNumber++;                   // Increment the number of graphs
+        plotHandle->numberOfGraphs++;                       // Increment the number of graphs
     }
 
     fprintf (plotHandle->pipe, "plot '-' title \"%s\" with %s lc rgb \"%s\"\n", pDataName, plotType, pColour);  // Set plot format
@@ -782,7 +713,6 @@ h_GPC_Plot *gpc_init_pz (const char *plotTitle,
         return (plotHandle);
     }
 
-    plotHandle->tempFilesUsedFlag = GPC_FALSE;              // Temporary files NOT used - DON'T need to delete them in gpc_close ()
     plotHandle->scalingMode = dimension;                    // Set dimension in handle
     strcpy (plotHandle->plotTitle, plotTitle);              // Set plot title in handle
 
@@ -865,17 +795,17 @@ int gpc_plot_pz (h_GPC_Plot *plotHandle,
         fprintf (plotHandle->pipe, "set yrange[-%1.3le:%1.3le]\n", plotHandle->scalingMode, plotHandle->scalingMode);
     }
 
-    if (plotHandle->highestGraphNumber != 0)
+    if (plotHandle->numberOfGraphs != 0)
     {
         fprintf (plotHandle->pipe, "unset multiplot\n");    // If there is an existing multiplot then close it
     }
     fprintf (plotHandle->pipe, "set multiplot\n");
 
-    plotHandle->highestGraphNumber = 1;                     // Reset the number of plots
+    plotHandle->numberOfGraphs = 1;                         // Reset the number of plots
     }
-    else                                    // GPC_ADD
+    else                                                    // GPC_ADD
     {
-        plotHandle->highestGraphNumber++;                   // Increment the number of graphs
+        plotHandle->numberOfGraphs++;                       // Increment the number of graphs
     }
 
     fprintf (plotHandle->pipe, "set parametric\n");         // Plot unit circle
@@ -992,10 +922,9 @@ h_GPC_Plot *gpc_init_spectrogram (const char *plotTitle,
         return (plotHandle);
     }
 
-    plotHandle->tempFilesUsedFlag = GPC_FALSE;              // Temporary files NOT used - DON'T need to delete them in gpc_close ()
     plotHandle->xAxisLength = xAxisLength;                  // Set X axis length in handle
     plotHandle->yAxisLength = yAxisLength;                  // Set Y axis length in handle
-    plotHandle->numberOf2ndAxisPlotted = 0;                 // We have not plotted any columns
+    plotHandle->numberOfGraphs = 0;                         // We have not plotted any columns
     strcpy (plotHandle->plotTitle, plotTitle);              // Set plot title in handle
 
     fprintf (plotHandle->pipe, "set term wxt 0 title \"%s\" size %u, %u\n", plotHandle->plotTitle, CANVAS_WIDTH, CANVAS_HEIGHT); // Set the plot
@@ -1009,8 +938,8 @@ h_GPC_Plot *gpc_init_spectrogram (const char *plotTitle,
     plotHandle->yMin = yMin;                                // Store values for min/max Y, for axis labels
     plotHandle->yMax = yMax;
 
-                                                        // NOTE - Have to add the +/-0.5 to plot all of the pixels and
-                                                        // to make peripheral pixels the same size as the internal ones
+                                                            // NOTE - Have to add the +/-0.5 to plot all of the pixels and
+                                                            // to make peripheral pixels the same size as the internal ones
     fprintf (plotHandle->pipe, "set yrange [%1.3le:%1.3le]\n", yMin - (0.5 * ((yMax - yMin) / yAxisLength)), yMax + (0.5 * ((yMax - yMin) / yAxisLength)));  // Set length of Y axis
     fprintf (plotHandle->pipe, "set zrange [%1.3le:%1.3le] noreverse nowriteback\n", zMin, zMax);
 
@@ -1074,7 +1003,7 @@ int gpc_plot_spectrogram (h_GPC_Plot *plotHandle,
         return (GPC_NO_ERROR);
     }
 
-    if (plotHandle->numberOf2ndAxisPlotted  == 0)
+    if (plotHandle->numberOfGraphs  == 0)
     {
         fprintf (plotHandle->pipe, "set xrange [%1.3le:%1.3le]\n", xMin - (0.5 * ((xMax - xMin) / plotHandle->xAxisLength)), xMax + (0.5 * ((xMax - xMin) / plotHandle->xAxisLength)));  // Set length of X axis
         fprintf (plotHandle->pipe, "plot '-' using 1:2:3 title \"%s\" with image\n", pDataName); // Set plot format
@@ -1082,26 +1011,26 @@ int gpc_plot_spectrogram (h_GPC_Plot *plotHandle,
 
     for (i = 0; i < plotHandle->yAxisLength; i++)           // Copy the data to gnuplot
     {
-        fprintf (plotHandle->pipe, "%1.3le %1.3le %1.3le\n", xMin + ((((double)plotHandle->numberOf2ndAxisPlotted) * (xMax - xMin)) / ((double)(plotHandle->xAxisLength - 1))),
+        fprintf (plotHandle->pipe, "%1.3le %1.3le %1.3le\n", xMin + ((((double)plotHandle->numberOfGraphs) * (xMax - xMin)) / ((double)(plotHandle->xAxisLength - 1))),
                                                     plotHandle->yMin + ((((double)i) * (plotHandle->yMax - plotHandle->yMin)) / ((double)(plotHandle->yAxisLength - 1))),
                                                     pData[i]);
     }
 
-    if (plotHandle->numberOf2ndAxisPlotted < (plotHandle->xAxisLength - 1))
+    if (plotHandle->numberOfGraphs < (plotHandle->xAxisLength - 1))
     {
         fprintf (plotHandle->pipe, "\n");                   // End of isoline scan
-        plotHandle->numberOf2ndAxisPlotted++;               // Increment number of columns plotted
+        plotHandle->numberOfGraphs++;                       // Increment number of columns plotted
     }
     else
     {
         fprintf (plotHandle->pipe, "e\n");                  // End of spectrogram dataset
-        plotHandle->numberOf2ndAxisPlotted = 0;             // Reset number of columns plotted for next scan
+        plotHandle->numberOfGraphs = 0;                     // Reset number of columns plotted for next scan
     }
 
     fflush (plotHandle->pipe);                              // Flush the pipe
 
 #if GPC_DEBUG
-    mssleep (500);                                          // Slow down output so that pipe doesn't overflow when logging results
+    mssleep (100);                                          // Slow down output so that pipe doesn't overflow when logging results
 #endif
 
     return (GPC_NO_ERROR);
@@ -1156,10 +1085,9 @@ h_GPC_Plot *gpc_init_image (const char *plotTitle,
         return (plotHandle);
     }
 
-    plotHandle->tempFilesUsedFlag = GPC_FALSE;              // Temporary files NOT used - DON'T need to delete them in gpc_close ()
     plotHandle->xAxisLength = xAxisLength;                  // Set X axis length in handle
     plotHandle->yAxisLength = yAxisLength;                  // Set Y axis length in handle
-    plotHandle->numberOf2ndAxisPlotted = 0;                 // We have not plotted any rows
+    plotHandle->numberOfGraphs = 0;                         // We have not plotted any rows
     strcpy (plotHandle->plotTitle, plotTitle);              // Set plot title in handle
 
     fprintf (plotHandle->pipe, "set term wxt 0 title \"%s\" size %u, %u\n", plotHandle->plotTitle, CANVAS_WIDTH, CANVAS_HEIGHT); // Set the plot
@@ -1167,8 +1095,8 @@ h_GPC_Plot *gpc_init_image (const char *plotTitle,
     fprintf (plotHandle->pipe, "set rmargin at screen %4.8lf\n", PLOT_RMARGIN);
     fprintf (plotHandle->pipe, "set border back\n");        // Set border behind plot
 
-                                                          // NOTE - Have to add the +/-0.5 to plot all of the pixels and
-                                                          // to make peripheral pixels the same size as the internal ones
+                                                            // NOTE - Have to add the +/-0.5 to plot all of the pixels and
+                                                            // to make peripheral pixels the same size as the internal ones
     fprintf (plotHandle->pipe, "set xrange [-0.5:%1.3le]\n", ((double)xAxisLength)-0.5);   // Set length of X axis
     fprintf (plotHandle->pipe, "set yrange [%1.3le:-0.5]\n", ((double)yAxisLength)-0.5);   // Set length of Y axis
     if ((zMin == GPC_IMG_AUTO_SCALE) && (zMax == GPC_IMG_AUTO_SCALE))
@@ -1247,7 +1175,7 @@ int gpc_plot_image (h_GPC_Plot *plotHandle,
     fflush (plotHandle->pipe);                              // Flush the pipe
 
 #if GPC_DEBUG
-    mssleep (2000);                                         // Slow down output so that pipe doesn't overflow when logging results
+    mssleep (100);                                         // Slow down output so that pipe doesn't overflow when logging results
 #endif
 
     return (GPC_NO_ERROR);
@@ -1296,16 +1224,15 @@ h_GPC_Plot *gpc_init_polar (const char *plotTitle,
         return (plotHandle);
     }
 
-    plotHandle->tempFilesUsedFlag = GPC_TRUE;               // Temporary files used - need to delete them in gpc_close ()
-    plotHandle->filenameRootId = -1;                        // Initialize filename root id
     strcpy (plotHandle->plotTitle, plotTitle);              // Set plot title in handle
+
+    fprintf (plotHandle->pipe, "set term wxt 0 title \"%s\" size %u, %u\n", plotHandle->plotTitle, CANVAS_WIDTH, CANVAS_HEIGHT); // Set the plot
 
     fprintf (plotHandle->pipe, "set polar\n");
     fprintf (plotHandle->pipe, "set angle degree\n");
     fprintf (plotHandle->pipe, "set size ratio 1\n");
     fprintf (plotHandle->pipe, "set tmargin 3\n");
     fprintf (plotHandle->pipe, "set bmargin 3\n");
-    fprintf (plotHandle->pipe, "set title \"%s\"\n", plotHandle->plotTitle);
     fprintf (plotHandle->pipe, "set key out vert nobox\n");
 
     fprintf (plotHandle->pipe, "set style line 1 lc rgb 'gray80' lt -1\n");
@@ -1379,63 +1306,40 @@ int gpc_plot_polar (h_GPC_Plot *plotHandle,
 
 {
     int   i;
-    FILE  *gpdtFile;
-    char  tmpFilename [30];
-    struct stat   fileStatBuffer;
 
-    if (addMode == GPC_NEW)                             // GPC_NEW
+    if (addMode == GPC_NEW)                                 // GPC_NEW
     {
-        if (plotHandle->filenameRootId != -1)           // If NOT called immediately after gpc_init_polar () remove existing graphs
-        {
-            for (i = 0; i <= plotHandle->highestGraphNumber; i++)   // Remove all temporary files
-            {
-                remove (plotHandle->graphArray[i].filename);
-            }
-        }
-
-        plotHandle->highestGraphNumber = 0;
-
-        i = -1;
-        do                                              // Create a unique local filename - Note this is NOT MT safe !
-        {
-            i++;
-            sprintf (tmpFilename, "%u-0.gpdt", i);
-        } while (stat (tmpFilename, &fileStatBuffer) == 0);
-        plotHandle->filenameRootId = i;
+        plotHandle->numberOfGraphs = 0;
     }
-    else                                // GPC_ADD
+    else                                                    // GPC_ADD
     {
-        plotHandle->highestGraphNumber++;
-        if (plotHandle->highestGraphNumber >= (MAX_NUM_GRAPHS - 1)) // Check we haven't overflowed the maximum number of graphs
+        plotHandle->numberOfGraphs++;
+        if (plotHandle->numberOfGraphs >= (MAX_NUM_GRAPHS - 1)) // Check we haven't overflowed the maximum number of graphs
         {
             return (GPC_ERROR);
         }
     }
 
-    sprintf (plotHandle->graphArray[plotHandle->highestGraphNumber].filename, "%u-%u.gpdt", plotHandle->filenameRootId, plotHandle->highestGraphNumber);
-    sprintf (plotHandle->graphArray[plotHandle->highestGraphNumber].title, "%s", pDataName);
-    sprintf (plotHandle->graphArray[plotHandle->highestGraphNumber].formatString, "%s lc rgb \"%s\"", plotType, pColour);
+    sprintf (plotHandle->graphArray[plotHandle->numberOfGraphs].title, "%s", pDataName);
+    sprintf (plotHandle->graphArray[plotHandle->numberOfGraphs].formatString, "%s lc rgb \"%s\"", plotType, pColour);
 
-    gpdtFile = fopen (plotHandle->graphArray[plotHandle->highestGraphNumber].filename, "w");    // Open temporary files
-    for (i = 0; i < numAngles; i++)                         // Write data to intermediate file
+
+    fprintf (plotHandle->pipe, "$DATA%d << EOD\n", plotHandle->numberOfGraphs); // Write data to named data block
+    for (i = 0; i < numAngles; i++)
     {
-        fprintf (gpdtFile, "%1.3le %1.3le\n", pAngles[i], pGains[i]);
+        fprintf (plotHandle->pipe, "%1.3le %1.3le\n", pAngles[i], pGains[i]);
     }
-    fclose (gpdtFile);
-    mssleep (100);                                          // Slow down file accesses to avoid missing data
+    fprintf (plotHandle->pipe, "EOD\n");
 
-    fprintf (plotHandle->pipe, "plot \"%s\" u (-$1+90.):($2-f_maxGain) t \"%s\" w %s", plotHandle->graphArray[0].filename, plotHandle->graphArray[0].title, plotHandle->graphArray[0].formatString);  // Send start of plot and first plot command
-    for (i = 1; i <= plotHandle->highestGraphNumber; i++)   // Send individual plot commands
+
+    fprintf (plotHandle->pipe, "plot $DATA%d u (-$1+90.):($2-f_maxGain) t \"%s\" w %s", 0, plotHandle->graphArray[0].title, plotHandle->graphArray[0].formatString);  // Send start of plot and first plot command
+    for (i = 1; i <= plotHandle->numberOfGraphs; i++)       // Send individual plot commands
     {
-        fprintf (plotHandle->pipe, ", \\\n \"%s\" u (-$1+90.):($2-f_maxGain) t \"%s\" w %s", plotHandle->graphArray[i].filename, plotHandle->graphArray[i].title, plotHandle->graphArray[i].formatString);  // Set plot format
+        fprintf (plotHandle->pipe, ", \\\n $DATA%d u (-$1+90.):($2-f_maxGain) t \"%s\" w %s", i, plotHandle->graphArray[i].title, plotHandle->graphArray[i].formatString);  // Set plot format
     }
     fprintf (plotHandle->pipe, "\n");                       // Send end of plot command
 
     fflush (plotHandle->pipe);                              // Flush the pipe
-
-#if GPC_DEBUG
-    mssleep (100);                                          // Slow down output so that pipe doesn't overflow when logging results
-#endif
 
     return (GPC_NO_ERROR);
 }
@@ -1457,19 +1361,11 @@ int gpc_plot_polar (h_GPC_Plot *plotHandle,
 
 void gpc_close (h_GPC_Plot *plotHandle)
 {
-    int i;
-
-    mssleep (500);                                          // Wait - ensures pipes flushed
+    mssleep (100);                                          // Wait - ensures pipes flushed
 
     fprintf (plotHandle->pipe, "exit\n");                   // Close GNUPlot
     pclose (plotHandle->pipe);                              // Close the pipe to Gnuplot
-    if (plotHandle->tempFilesUsedFlag == GPC_TRUE)          // If we have used temporary files we need to delete them
-    {
-        for (i = 0; i <= plotHandle->highestGraphNumber; i++)   // Remove all temporary files
-        {
-            remove (plotHandle->graphArray[i].filename);
-        }
-    }
+
     free (plotHandle);                                      // Free the plot
 }
 

@@ -27,7 +27,7 @@ const double Gains [] = {
 int main()
 {
     hPolarPlot =                                // Initialize plot
-        gpc_init_polar ("Polar plot",           // Plot title
+        gpc_init_polar ("Polar Plot",           // Plot title
                         GAIN_MIN,               // Minimum gain value
                         GAIN_MAX,               // Maximum gain value
                         GPC_KEY_ENABLE);        // Legend / key mode
@@ -51,7 +51,7 @@ int main()
                     Angles,                     // Dataset - beam angles
                     &Gains[NUM_ANGLES],         // Dataset - beam gains
                     NUM_ANGLES,                 // Number of angles to plot
-                    "Set 1",                    // Dataset title
+                    "Set 2",                    // Dataset title
                     "lines",                    // Graph type
                     "green",                    // Colour
                     GPC_ADD);                   // New graph
@@ -62,7 +62,7 @@ int main()
                     Angles,                     // Dataset - beam angles
                     &Gains[2*NUM_ANGLES],       // Dataset - beam gains
                     NUM_ANGLES,                 // Number of angles to plot
-                    "Set 1",                    // Dataset title
+                    "Set 2",                    // Dataset title
                     "lines",                    // Graph type
                     "blue",                     // Colour
                     GPC_NEW);                   // New graph

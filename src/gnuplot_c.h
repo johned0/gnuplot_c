@@ -12,15 +12,17 @@
 #include<stdlib.h>
 #include <sys/stat.h>
 
-#define MAX_NUM_GRAPHS          50                  // Maximum number of graphs (multiplots) in a plot
+#define MAX_NUM_GRAPHS          100                 // Maximum number of graphs in a plot
 
 #define GPC_AUTO_SCALE          0.0                 // Auto scaling
 #define GPC_IMG_AUTO_SCALE      0                   // Auto scaling for images
 
-#define CANVAS_WIDTH            800
-#define CANVAS_HEIGHT           600
-#define PLOT_LMARGIN            (80.0/CANVAS_WIDTH)   // 512 pixel X axis
-#define PLOT_RMARGIN            (591.0/CANVAS_WIDTH)
+#define CANVAS_WIDTH            1920
+#define CANVAS_HEIGHT           1080
+#define PLOT_LMARGIN_SIZE       80.0
+#define PLOT_RMARGIN_SIZE       250.0
+#define PLOT_LMARGIN            (PLOT_LMARGIN_SIZE/CANVAS_WIDTH)
+#define PLOT_RMARGIN            ((CANVAS_WIDTH - PLOT_RMARGIN_SIZE)/CANVAS_WIDTH)
 
 #define GPC_NO_ERROR            0                   // No error
 #define GPC_ERROR               1                   // Error
@@ -29,12 +31,6 @@
 #define GPC_TRUE                1                   // True flag
 
 #define GPC_END_PLOT            NULL                // Flag to indicate end of the plot
-
-enum gpcMultiFastMode                               // Multiplot / fast plot modes
-{
-    GPC_MULTIPLOT = 0,
-    GPC_FASTPLOT
-};
 
 enum gpcKeyMode                                     // Legend / Key mode
 {
@@ -86,11 +82,9 @@ typedef struct
 typedef struct
 {
     FILE *pipe;                                     // Pipe to Gnuplot instance
-    int highestGraphNumber;                         // Number of graphs on this plot
+    int numberOfGraphs;                             // Number of graphs on this plot or Number of columns for spectrogram plot
     h_GPC_Graph graphArray [MAX_NUM_GRAPHS];        // Array of graphs
     char plotTitle[80];                             // Plot title
-    int filenameRootId;                             // Multiplot filename root Id
-    enum gpcMultiFastMode multiFastMode;            // Multiplot / fast plot mode
     double scalingMode;                             // Scaling mode / dimension for XY and PZ graphs
     long xAxisLength;                               // X axis length for spectrogram plots and images
     long yAxisLength;                               // Y axis length for spectrogram plots and images
@@ -98,7 +92,6 @@ typedef struct
     double xMax;                                    // Maximum value of X axis - used for axis labels
     double yMin;                                    // Minimum value of Y axis - used for axis labels
     double yMax;                                    // Maximum value of Y axis - used for axis labels
-    long numberOf2ndAxisPlotted;                    // Number of columns for spectrogram plot
     int tempFilesUsedFlag;                          // Flag set when temporary files used
 } h_GPC_Plot;
 
@@ -108,7 +101,6 @@ h_GPC_Plot *gpc_init_2d (const char *plotTitle,     // Plot title
     const char *yLabel,                             // Y axis label
     const double scalingMode,                       // Scaling mode
     const enum gpcPlotSignMode signMode,            // Sign mode - signed, positive, negative
-    const enum gpcMultiFastMode multiFastMode,      // Multiplot / fast plot mode
     const enum gpcKeyMode keyMode);                 // Legend / key mode
 
 h_GPC_Plot *gpc_init_2d_logscalex (const char *plotTitle,   // Plot title
@@ -116,7 +108,6 @@ h_GPC_Plot *gpc_init_2d_logscalex (const char *plotTitle,   // Plot title
     const char *yLabel,                             // Y axis label
     const double scalingMode,                       // Scaling mode
     const enum gpcPlotSignMode signMode,            // Sign mode - signed, positive, negative
-    const enum gpcMultiFastMode multiFastMode,      // Multiplot / fast plot mode
     const enum gpcKeyMode keyMode);                 // Legend / key mode
     
 int gpc_plot_2d (h_GPC_Plot *plotHandle,            // Plot handle

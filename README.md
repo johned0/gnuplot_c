@@ -21,6 +21,8 @@ from here : http://gnuplot.info/.
 HISTORY
 =======
 
+  * V3.51   21/10/2017      gpc_plot_polar limits data sent to gnuplot, using gMin and gMax
+
   * V3.50   04/06/2017      Removed all use of temporary files to improve performance
                             gpcMultiFastModes deprecated and function parameters removed.
                             Tested with gnuplot v5.1 and v5.2_RC1

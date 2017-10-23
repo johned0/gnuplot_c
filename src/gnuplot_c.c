@@ -1271,6 +1271,9 @@ h_GPC_Plot *gpc_init_polar (const char *plotTitle,
 
     fflush (plotHandle->pipe);                                  // flush the pipe
 
+    plotHandle->xMin = gMin;
+    plotHandle->xMax = gMax;
+
     return (plotHandle);
 }
 
@@ -1327,7 +1330,15 @@ int gpc_plot_polar (h_GPC_Plot *plotHandle,
     fprintf (plotHandle->pipe, "$DATA%d << EOD\n", plotHandle->numberOfGraphs); // Write data to named data block
     for (i = 0; i < numAngles; i++)
     {
-        fprintf (plotHandle->pipe, "%1.3le %1.3le\n", pAngles[i], pGains[i]);
+        if (pGains[i] < plotHandle->xMin) {
+            fprintf (plotHandle->pipe, "%1.3le %1.3le\n", pAngles[i], plotHandle->xMin);
+        }
+        else if (pGains[i] > plotHandle->xMax) {
+            fprintf (plotHandle->pipe, "%1.3le %1.3le\n", pAngles[i], plotHandle->xMax);
+        }
+        else {
+            fprintf (plotHandle->pipe, "%1.3le %1.3le\n", pAngles[i], pGains[i]);
+        }
     }
     fprintf (plotHandle->pipe, "EOD\n");
 

@@ -60,7 +60,7 @@ int main(void)
                     image,                          // Data array
                     "Lena");                        // Dataset title
 
-    printf ("\nHit <CR> to continue ....\n"); getchar ();   // Clear keyboard buffer and wait for <CR>
+    printf ("\nHit <Carriage Return> to continue ....\n"); getchar ();   // Clear keyboard buffer and wait for <Carriage Return>
 
     gpc_close (hImage);
 

@@ -70,10 +70,10 @@ int main()
                          GPC_ADD);                  // Add plot
         }
 
-        printf ("Hit <CR> to continue ....\n"); getchar ();
+        printf ("Hit <Carriage Return> to continue ....\n"); getchar ();
     }
 
-    printf ("Hit <CR> to continue ....\n"); getchar ();
+    printf ("Hit <Carriage Return> to continue ....\n"); getchar ();
 
     hPlot =                                         // Initialize plot
         gpc_init_pz ("Pole Zero Plot",              // Plot title
@@ -93,7 +93,7 @@ int main()
                  GPC_COMPLEX_POLE,                  // Pole / zero mode
                  GPC_NEW);                          // New plot
 
-    printf ("Complex Poles\nHit <CR> to continue ....\n"); getchar ();
+    printf ("Complex Poles\nHit <Carriage Return> to continue ....\n"); getchar ();
 
     gpc_plot_pz (hPlot,                             // Plot handle
                  ConjugatePoles,                    // Dataset
@@ -102,7 +102,7 @@ int main()
                  GPC_CONJUGATE_POLE,                // Pole / zero mode
                  GPC_ADD);                          // New plot
 
-    printf ("Conjugate Poles\nHit <CR> to continue ....\n"); getchar ();
+    printf ("Conjugate Poles\nHit <Carriage Return> to continue ....\n"); getchar ();
 
     gpc_plot_pz (hPlot,                             // Plot handle
                  ComplexZeros,                      // Dataset
@@ -111,7 +111,7 @@ int main()
                  GPC_COMPLEX_ZERO,                  // Pole / zero mode
                  GPC_ADD);                          // New plot
 
-    printf ("Complex Zeros\nHit <CR> to continue ....\n"); getchar ();
+    printf ("Complex Zeros\nHit <Carriage Return> to continue ....\n"); getchar ();
 
     gpc_plot_pz (hPlot,                             // Plot handle
                  ConjugateZeros,                    // Dataset
@@ -120,7 +120,7 @@ int main()
                  GPC_CONJUGATE_ZERO,                // Pole / zero mode
                  GPC_ADD);                          // New plot
 
-    printf ("Conjugate Zeros\nHit <CR> to exit ....\n"); getchar ();
+    printf ("Conjugate Zeros\nHit <Carriage Return> to exit ....\n"); getchar ();
 
     gpc_close (hPlot);
 

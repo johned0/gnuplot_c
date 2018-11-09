@@ -81,7 +81,7 @@ int main(void)
                               X_MAX);               // Maximum X value
     }
 
-    printf ("\nHit <CR> to continue ....\n"); getchar (); // Clear keyboard buffer and wait for <CR>
+    printf ("\nHit <Carriage Return> to continue ....\n"); getchar (); // Clear keyboard buffer and wait for <Carriage Return>
 
     gpc_close (hSpectrogram);
 

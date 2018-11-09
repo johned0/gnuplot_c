@@ -56,7 +56,7 @@ int main()
                     "green",                    // Colour
                     GPC_ADD);                   // New graph
 
-    printf ("\nHit <CR> to continue ....\n"); getchar (); // Wait for <CR>
+    printf ("\nHit <Carriage Return> to continue ....\n"); getchar (); // Wait for <Carriage Return>
 
     gpc_plot_polar (hPolarPlot,                 // Graph handle
                     Angles,                     // Dataset - beam angles
@@ -67,7 +67,7 @@ int main()
                     "blue",                     // Colour
                     GPC_NEW);                   // New graph
 
-    printf ("\nHit <CR> to continue ....\n"); getchar (); // Wait for <CR>
+    printf ("\nHit <Carriage Return> to continue ....\n"); getchar (); // Wait for <Carriage Return>
 
     gpc_close (hPolarPlot);
 

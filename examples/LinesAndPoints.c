@@ -115,7 +115,7 @@ int main()
                          GPC_ADD);              // Add plot
         }
         
-        printf ("\nHit <CR> to continue ....\n"); getchar (); // Wait for <CR>
+        printf ("\nHit <Carriage Return> to continue ....\n"); getchar (); // Wait for <Carriage Return>
     }
     
     gpc_close (h2DPlot1);

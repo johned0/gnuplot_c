@@ -21,6 +21,12 @@ from here : http://gnuplot.info/.
 HISTORY
 =======
 
+  * V3.53   18/10/2018      Create plot tidy up
+
+  * V3.52   05/08/2018      Pipe data resolution changed from %1.3le to %1.6le
+                            gpc_init_polar supports linear and log magnitude plots
+                            Wider range of gnuplot terminals implemented
+
   * V3.51   21/10/2017      gpc_plot_polar limits data sent to gnuplot, using gMin and gMax
 
   * V3.50   04/06/2017      Removed all use of temporary files to improve performance
